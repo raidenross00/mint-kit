@@ -629,12 +629,24 @@ Each option shows the font at hero (72px), H1 (48px), H2 (32px) sizes.
 Use real content from the product context, not lorem ipsum.
 
 **Research must inform font selection.** If Phase 2 research was done, your font
-choices should reference what you found. If you discovered that Midori uses clean
-Japanese typography, propose a font that captures that quality. If competitors all
-use geometric sans-serifs, one option should deliberately break from that. If a
-reference brand's type left an impression during research, name it when explaining
-your pick: "This captures the editorial quality I saw in [brand]." Research that
-doesn't influence the proposals was wasted time.
+choices should reference what you found. Research references fall into two buckets
+— know which you're using:
+
+- **Aspirational references** (brands the user WANTS to feel like) → draw from
+  them directly. If the user referenced Japanese stationery and you found Midori
+  uses clean, quiet typography, propose fonts that capture that same quality.
+  "This is in the spirit of what Midori does" is the right move.
+- **Competitive references** (brands in the user's space they want to stand apart
+  from) → note what they do, then propose options that differ. If every competitor
+  uses geometric sans-serifs, one option should deliberately break from that.
+
+Don't treat all research as "things to avoid." The user's own references and
+inspirations are things to LEAN INTO. The competitor landscape is where you look
+for differentiation. Name which bucket each reference falls into when explaining
+your picks: "This captures the quality I saw in [aspirational brand]" or "This
+breaks from the [competitor pattern] every product in your space uses."
+
+Research that doesn't influence the proposals was wasted time.
 
 **CRITICAL — the 4 options must use DIFFERENT font classifications.**
 - Option A: the expected category choice for the vibe
@@ -768,11 +780,10 @@ Build 4 color palettes in Figma WITH the approved type applied. The user sees
 type + color together. Each palette must feel like the vibe lock's Temperature
 and Emotion.
 
-**Research must inform color selection.** Same rule as type — if Phase 2 research
-was done, reference what you found. If competitors all use cool blue-gray palettes,
-one option should deliberately differ. If a reference brand's warm whites or
-particular accent color stood out, name it: "This captures the warmth I saw in
-[brand]'s approach." Don't do research then propose generic palettes.
+**Research must inform color selection.** Same two-bucket rule as type:
+- **Aspirational references** → lean into their palette qualities
+- **Competitive references** → note their patterns, propose differentiation
+Don't do research then propose generic palettes.
 
 **Generate scales using oklch math.** Define the hero color (primary-500) as an
 oklch value (L%, C, H). Generate the full 50-950 scale by stepping Lightness
