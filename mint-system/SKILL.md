@@ -563,7 +563,7 @@ direction, Tab 2 decides whether to lock or iterate in that direction.
         { "label": "A: [Font name] (Recommended)", "description": "[Classification]. [Why it fits the vibe lock]" },
         { "label": "B: [Font name]", "description": "[Classification]. [Why it fits]" },
         { "label": "C: [Font name]", "description": "[Classification]. [Why it fits]" },
-        { "label": "None of these", "description": "Wrong direction entirely. I'll explain what I'm after." }
+        { "label": "D: [Font name]", "description": "[Classification]. [Why it fits]" }
       ]
     },
     {
@@ -615,12 +615,13 @@ direction, Tab 2 decides whether to lock or iterate in that direction.
     feeling through completely different means
   Build specimens, present another Pick + Lock AskUserQuestion.
 
-**If user picks "Type something" or "Chat about this"** (auto-added options) →
+**If user picks "Type something" or "Chat about this"** (auto-added by the UI) →
 drop to conversational. Diagnose what went wrong, name 2-3 real brands that
 match better, propose specific pivots. Narrow, don't re-open.
 
-**Always provide exactly 4 options on the Pick tab.** AskUserQuestion hard limit
-is 4. "Type something" and "Chat about this" are auto-added as escape hatches.
+**All 4 Pick options must be REAL font/palette choices.** Do NOT waste a slot on
+"None of these" — the auto-added "Type something" and "Chat about this" already
+serve as escape hatches. 4 slots = 4 genuine design options.
 
 #### 3b-i: Display font (the personality)
 
@@ -693,6 +694,15 @@ Iterate until display font is locked.
 
 Build 4 body font options in Figma, each shown UNDERNEATH the locked display font.
 The user sees the pairing live — display heading above, body text below.
+
+**The 4 body options must vary in approach, not just brand:**
+- Option A: the natural pairing — same classification or foundry as the display font
+- Option B: a different classification that complements (e.g., humanist vs geometric)
+- Option C: a different classification, another angle on complementing the display
+- Option D: a genuine risk — a pairing that shouldn't work but might (e.g., a serif
+  body under a grotesque display, a rounded body under sharp headings)
+
+4 sans-serifs with slightly different letterforms is NOT enough divergence.
 
 ```javascript
 // TARGET: mint-system file (fileKey: ...)
