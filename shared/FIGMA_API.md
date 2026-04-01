@@ -38,7 +38,11 @@ variables created in prior calls. NEVER recreate a variable — always look it u
 
 ### Frame Sizing — Compact Auto-Layout + Page Positioning
 Build specimens as compact auto-layout grids, NOT 1400px page layouts.
-**Place each frame side-by-side with x-offset so they don't overlap:**
+
+**Every frame MUST have explicit x/y coordinates.** Without this, all frames pile
+up at origin and overlap. Set x/y AFTER configuring auto-layout (auto-layout
+resets position).
+
 ```javascript
 const frame = figma.createFrame();
 frame.name = "A: Direction Name";
@@ -47,12 +51,21 @@ frame.primaryAxisSizingMode = "AUTO";
 frame.counterAxisSizingMode = "AUTO";
 frame.paddingTop = frame.paddingBottom = frame.paddingLeft = frame.paddingRight = 48;
 frame.itemSpacing = 32;
-// CRITICAL: offset each frame so they don't stack at 0,0
-// Use index * 800 for x position (frames auto-size, 800 gives breathing room)
-frame.x = directionIndex * 800;
-frame.y = 0;
+// SET POSITION AFTER AUTO-LAYOUT CONFIG
+frame.x = directionIndex * (frameWidth + gap);
+frame.y = rowY;
 ```
-Each direction frame gets its own x position. Without this, all frames pile up at origin.
+
+**Positioning rules:**
+- Pick a consistent frame width for the skill (e.g., 400px). Add a gap (e.g., 50px).
+- Row of 4 frames: x = 0, 450, 900, 1350 (if 400px + 50px gap)
+- Multiple rows: calculate y from previous row's bottom + 80px gap
+- Each skill defines its own widths in its SKILL.md — the principle is: explicit
+  coordinates, consistent spacing, predictable grid.
+
+**After building each row of frames:** call `get_screenshot` on the page to verify
+no overlap BEFORE presenting options to the user. If frames overlap, reposition
+them before continuing.
 
 ### Frame Verification — TRUST THE CREATION CALL
 
@@ -66,19 +79,11 @@ spirals.
 **After creating frames:**
 1. The creation call returned IDs → frames exist. Trust it.
 2. Go straight to `get_screenshot` using the page node ID.
-3. If `get_screenshot` fails, tell the user to check Figma directly. Do NOT
-   rebuild the frames. They are there.
+3. Use the screenshot to verify LAYOUT (no overlap, correct positioning) — not
+   existence. If layout is wrong, fix positions. If screenshot fails, tell the
+   user to check Figma directly.
 4. **NEVER rebuild frames because a verification or screenshot call returned
    empty/error.** The frames exist. The API is lagging.
-
-**If frames overlap at 0,0** (visible in screenshot or user reports it):
-THEN run a fix-up call to reposition:
-```javascript
-const page = figma.root.children.find(p => p.name.includes("Direction"));
-const frames = page.children.filter(c => c.type === "FRAME");
-frames.forEach((f, i) => { f.x = i * 800; f.y = 0; });
-```
-Only do this reactively (user reports overlap or screenshot shows it), not preemptively.
 
 ### Token Strategy — What Goes Where
 
