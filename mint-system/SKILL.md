@@ -558,7 +558,7 @@ direction, Tab 2 decides whether to lock or iterate in that direction.
         { "label": "A: [Font name] (Recommended)", "description": "[Classification]. [Why it fits the vibe lock]" },
         { "label": "B: [Font name]", "description": "[Classification]. [Why it fits]" },
         { "label": "C: [Font name]", "description": "[Classification]. [Why it fits]" },
-        { "label": "D: [Font name]", "description": "[Classification]. [Why it fits]" }
+        { "label": "None of these", "description": "Wrong direction entirely. I'll explain what I'm after." }
       ]
     },
     {
@@ -566,9 +566,8 @@ direction, Tab 2 decides whether to lock or iterate in that direction.
       "question": "Happy with your pick, or want to explore more in that direction?",
       "multiSelect": false,
       "options": [
-        { "label": "Lock it", "description": "This is the one. Move on to the next layer." },
-        { "label": "More like this", "description": "Right direction, show me 4 similar alternatives." },
-        { "label": "None of these", "description": "Wrong direction entirely. I'll explain what I'm after." }
+        { "label": "Lock it (Recommended)", "description": "This is the one. Move on to the next layer." },
+        { "label": "More like this", "description": "Right direction, show me 4 similar alternatives." }
       ]
     }
   ]
@@ -576,13 +575,25 @@ direction, Tab 2 decides whether to lock or iterate in that direction.
 ```
 
 - **"Lock it"** → lock the font, move to next layer
-- **"More like this"** → build 4 fonts in the same classification/feel as their
-  pick, present another AskUserQuestion. This narrows instead of re-opening.
-- **"None of these"** → drop to conversational. Diagnose what went wrong, name
-  2-3 real brands that match better, propose specific pivots. Narrow, don't re-open.
+- **"More like this"** → the user liked the VIBE of their pick, not just the
+  classification. Extract what makes that font feel the way it does (weight,
+  contrast, rhythm, personality) and find 4 alternatives that hit the same feel
+  through DIFFERENT approaches:
+  - **A:** Same family/foundry (the literal "more of this" — closest match)
+  - **B:** Different classification, same vibe (e.g., picked a grotesque that
+    feels warm? Try a humanist sans that's also warm)
+  - **C:** Same vibe but a genuine risk — a font that captures the feeling
+    through unexpected means (a serif that somehow feels like the grotesque
+    they liked, a display font from a different era)
+  - **D:** Your new recommendation given what you now know about their taste
+  Build specimens, present another Pick + Lock AskUserQuestion.
 
-**Always provide exactly 4 options.** AskUserQuestion defaults to showing 3 if you
-only provide 3. Always give 4 to fill the layout.
+**If user picks "Type something" or "Chat about this"** (auto-added options) →
+drop to conversational. Diagnose what went wrong, name 2-3 real brands that
+match better, propose specific pivots. Narrow, don't re-open.
+
+**Always provide exactly 4 options on the Pick tab.** AskUserQuestion hard limit
+is 4. "Type something" and "Chat about this" are auto-added as escape hatches.
 
 #### 3b-i: Display font (the personality)
 
