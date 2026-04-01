@@ -533,6 +533,13 @@ Build 4 color palettes in Figma WITH the approved type applied. The user sees
 type + color together. Each palette must feel like the vibe lock's Temperature
 and Emotion.
 
+**Generate scales using oklch math.** Define the hero color (primary-500) as an
+oklch value (L%, C, H). Generate the full 50-950 scale by stepping Lightness
+evenly while keeping Chroma and Hue constant (slight chroma reduction at extremes
+is fine). This produces perceptually uniform scales — every step looks like an
+equal jump in brightness, unlike hex/RGB interpolation. Convert to RGBA for Figma
+storage. See "oklch Scale Generation" in Phase 4 for the conversion math.
+
 ```javascript
 // TARGET: mint-system file (fileKey: ...)
 // Create "02 — Color Options" page
@@ -543,7 +550,18 @@ and Emotion.
 //   Semantic colors (success, warning, error, info)
 //   Colors in context: text on backgrounds, buttons, cards
 //   USE THE APPROVED TYPE from 3b — show type + color together
-//   HARDCODED values
+//   HARDCODED values (generated via oklch, stored as RGBA)
+//
+//   COMPONENT PREVIEW STRIP (at bottom of each frame):
+//     A small section showing the palette on interactive surfaces:
+//     - A filled rectangle with centered text (button shape)
+//     - A stroked rectangle with left-aligned text (input shape)
+//     - A filled card rectangle with heading + body text
+//     All hardcoded. All use the palette's primary, neutral, and text colors.
+//     Add a caption above the strip in 12px muted text:
+//       "Preview only — not real components. Component design happens in /mint-lib."
+//     This strip helps the user judge how colors feel on interactive surfaces,
+//     NOT how final components will look.
 //
 // Return frame node IDs
 ```
@@ -636,11 +654,70 @@ Split across multiple `use_figma` calls following the partition boundaries above
 - Effect Styles — shadows, focus rings
 - NO Role variables — those are mint-lib's job
 
+### oklch Scale Generation
+
+All color scales MUST be generated using oklch math. This produces perceptually
+uniform scales — every step is an equal perceived brightness jump, unlike hex/RGB
+interpolation where blue looks darker than orange at the same "lightness."
+
+**How it works:**
+1. Define the hero value (e.g., primary-500) in oklch: `oklch(L% C H)`
+   - L = lightness (0-100%), C = chroma (0-0.4), H = hue (0-360)
+2. Generate the scale by stepping L while holding C and H roughly constant:
+   - 50:  L=97%  (near-white tint)
+   - 100: L=93%
+   - 200: L=85%
+   - 300: L=75%
+   - 400: L=63%
+   - 500: L=55%  (hero — adjust to match approved color)
+   - 600: L=47%
+   - 700: L=39%
+   - 800: L=30%
+   - 900: L=22%
+   - 950: L=15%  (near-black shade)
+3. Reduce chroma slightly at extremes (50/100 and 900/950) — very light and very
+   dark colors can't hold high chroma without clipping.
+4. Convert each oklch value to sRGB for Figma storage: oklch → Lab → XYZ → sRGB.
+   Figma variables use RGBA {r, g, b, a} on 0-1 scale.
+
+**Conversion in use_figma** (inline, no external deps):
+```javascript
+// oklch to sRGB conversion (for use inside use_figma calls)
+function oklchToRgb(L, C, H) {
+  // L: 0-1, C: 0-0.4, H: degrees
+  const hRad = H * Math.PI / 180;
+  const a = C * Math.cos(hRad);
+  const b = C * Math.sin(hRad);
+  // OKLab to linear sRGB via matrix
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+  const l = l_ * l_ * l_;
+  const m = m_ * m_ * m_;
+  const s = s_ * s_ * s_;
+  let r = +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+  let g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+  let bl = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s;
+  // Clamp to 0-1
+  r = Math.max(0, Math.min(1, r));
+  g = Math.max(0, Math.min(1, g));
+  bl = Math.max(0, Math.min(1, bl));
+  return { r, g, b: bl, a: 1 };
+}
+// Usage: variable.setValueForMode(modeId, oklchToRgb(0.55, 0.2, 250));
+```
+
+**Why this matters:**
+- Cross-hue consistency: primary-500 and accent-500 have the same visual weight
+- Accessibility: contrast ratios map to real perceived contrast
+- Dark mode ready: flipping an oklch scale preserves contrast relationships
+- Industry standard: shadcn/ui and Tailwind v4 both use oklch
+
 ### Step 1: Create Brand Variables — Colors
 
 Split into 2 calls if needed (primary+neutral in one, accent+semantic in another).
 
-**Color scales** — convert all approved hex values to RGBA {r, g, b, a} on 0-1 scale:
+**Color scales** — generate using oklch math (see above), store as RGBA {r, g, b, a} on 0-1 scale:
 - Brand/Color/primary-50 through primary-950 (full 10-step scale)
 - Brand/Color/neutral-50 through neutral-950 (full 10-step scale)
 - Brand/Color/accent-* (if design has secondary/accent — full scale)
@@ -885,11 +962,13 @@ Specific radius/border values are NOT locked here — mint-lib discovers those.]
 
 ## Color
 
+Color scales generated using oklch for perceptual uniformity.
+
 ### Brand Tokens
-| Token | Hex | Usage |
-|-------|-----|-------|
-| Brand/Color/primary-500 | #XXXXXX | Primary actions |
-| ... | ... | ... |
+| Token | oklch | Hex | Usage |
+|-------|-------|-----|-------|
+| Brand/Color/primary-500 | oklch(55% 0.2 250) | #XXXXXX | Primary actions |
+| ... | ... | ... | ... |
 
 ### Alias Tokens (Semantic)
 | Token | → Brand Reference | Usage |
@@ -898,7 +977,11 @@ Specific radius/border values are NOT locked here — mint-lib discovers those.]
 | ... | ... | ... |
 
 ### CSS Custom Properties
-[Full set of CSS variables mirroring Brand and Alias layers]
+```css
+/* oklch values (source of truth) */
+--color-primary-500: oklch(55% 0.2 250);
+/* Repeat for all Brand and Alias tokens */
+```
 
 ## Spacing
 | Token | Value |
