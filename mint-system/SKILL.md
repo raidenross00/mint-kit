@@ -63,8 +63,13 @@ Read and follow all rules in `~/.claude/skills/mint-kit/shared/FIGMA_API.md`.
 - Call 7: Alias spacing + layout variables
 
 **Partition boundaries for specimen pages:**
-- One `use_figma` call per specimen frame (each of the 5 options)
-- Never try to build all 5 in a single call
+- One `use_figma` call per specimen frame (each of the 4 options)
+- Never try to build all 4 in a single call
+- **POSITIONING — prevent overlap:** Each frame must set explicit x/y coordinates.
+  Use 400px frame width + 50px gap (x: 0, 450, 900, 1350). Subsequent rows
+  offset y by previous row height + 80px gap. Set x/y AFTER configuring
+  auto-layout. After building all frames in a row, call `get_screenshot` to
+  verify no overlap before presenting to user.
 
 ---
 
@@ -636,15 +641,28 @@ If all 4 use the same classification, you've failed to diverge.
 // Create "01 — Typography" page
 // One use_figma call PER display option (4 calls)
 //
-// Each option frame (compact auto-layout):
+// Each option frame (compact auto-layout, width: 400px):
 //   Font at hero (72px), H1 (48px), H2 (32px)
 //   NEUTRAL BACKGROUND ONLY
 //   Real product content
 //   Load font via figma.loadFontAsync with try/catch (Inter fallback)
 //   HARDCODED values
 //
+// POSITIONING — prevent overlap:
+//   Frame A: x=0,    y=0
+//   Frame B: x=450,  y=0
+//   Frame C: x=900,  y=0
+//   Frame D: x=1350, y=0
+//   (400px wide + 50px gap between frames)
+//   Each call must set frame.x and frame.y explicitly.
+//   If the frame uses auto-layout, set x/y AFTER configuring auto-layout.
+//
 // Return frame node IDs
 ```
+
+**After building all 4:** call `get_screenshot` on the "01 — Typography" page to
+verify frames are not overlapping. If they overlap, reposition before presenting
+to the user.
 
 After building, use the **selection pattern** above (Pick + Lock AskUserQuestion).
 Label options A through D. State your recommendation.
@@ -668,8 +686,17 @@ The user sees the pairing live — display heading above, body text below.
 //   NEUTRAL BACKGROUND ONLY
 //   HARDCODED values
 //
+// POSITIONING — below display options:
+//   Frame A: x=0,    y=[display row bottom + 80px gap]
+//   Frame B: x=450,  y=same
+//   Frame C: x=900,  y=same
+//   Frame D: x=1350, y=same
+//   Use the display frame heights (from returned node IDs) to calculate y.
+//
 // Return frame node IDs
 ```
+
+**After building all 4:** call `get_screenshot` to verify no overlap.
 
 After building, use the **selection pattern** above (Pick + Lock AskUserQuestion).
 Label options A through D. Explain pairing rationale — why each body font
@@ -696,8 +723,16 @@ display + body fonts.
 //   NEUTRAL BACKGROUND ONLY
 //   HARDCODED values
 //
+// POSITIONING — below body options:
+//   Frame A: x=0,    y=[body row bottom + 80px gap]
+//   Frame B: x=450,  y=same
+//   Frame C: x=900,  y=same
+//   Frame D: x=1350, y=same
+//
 // Return frame node IDs
 ```
+
+**After building all 4:** call `get_screenshot` to verify no overlap.
 
 After building, use the **selection pattern** above (Pick + Lock AskUserQuestion).
 Label options A through D.
