@@ -371,110 +371,54 @@ categorized font reference (organized by aesthetic direction).
 
 ## Phase 3: Propose + Build Live
 
-Two types of design dimensions:
-
-- **Conversational** (aesthetic, decoration, layout, motion) — propose in text with
-  SAFE/RISK breakdown. No Figma specimens.
-- **Visual** (typography, color, spacing+shape) — build specimens in Figma so the user
-  compares visually.
+Phase 3 has three steps: combined direction specimens, then refinement, then
+spacing/shape as conversation.
 
 During exploration, specimens use **hardcoded values** — the decisions aren't made yet.
 After all dimensions are approved, Phase 4 creates the token system.
 
-**IMPORTANT — Direction Divergence:** During exploration (3a-3c), each direction must
-be a genuinely different PHILOSOPHY, not a variation within one category.
+### 3a: Combined Direction Specimens (type + color + density together)
 
-**Self-check before presenting directions:** Look at all 4 side by side. If a non-designer
+**Why combined:** You can't judge typography without seeing it with color. You can't
+judge color without seeing it with type. Proposing them separately causes premature
+anchoring — the model describes hex values during the "vibe" conversation, then gets
+stuck on those values during the actual color phase. Build complete specimens instead.
+
+**Before building:** Read `~/.claude/skills/mint-kit/mint-system/FONT_KNOWLEDGE_BASE.md`.
+
+**Build 4 COMPLETE direction specimens in Figma.** Each direction is a full aesthetic
+statement: display font + body font + data font + primary color + neutral scale +
+accent color + background + density/spacing feel. One `use_figma` call per direction.
+
+**IMPORTANT — Direction Divergence:** Each direction must be a genuinely different
+PHILOSOPHY, not a variation within one category.
+
+**Self-check before presenting:** Look at all 4 side by side. If a non-designer
 would say "these all look kinda similar," you failed. The 4 directions should be
 obviously different at a glance — different visual weight, different structural logic,
 different personality. One should feel expected, one should feel surprising, one should
 feel risky, and one should make the user think "I never would have considered that."
 
-Break from the token system during exploration — these are creative explorations,
-not token applications.
-
-### 3-pre: Conversational Dimensions
-
-Before building visual specimens, propose conversational dimensions as one coherent
-text block. Present as a COMPLETE proposal, not a menu of options:
-
-```
-Based on [product context] and [research findings / design knowledge]:
-
-AESTHETIC: [direction] — [one-line rationale]
-DECORATION: [level] — [why this pairs with the aesthetic]
-LAYOUT: [approach] — [why this fits the product type]
-
-This system is coherent because [explain how choices reinforce each other].
-
-SAFE CHOICES (category baseline — your users expect these):
-  - [2-3 decisions that match category conventions, with rationale]
-
-RISKS (where your product gets its own face):
-  - [2-3 deliberate departures from convention]
-  - For each risk: what it is, why it works, what you gain, what it costs
-
-The safe choices keep you literate in your category. The risks are where
-your product becomes memorable. Which risks appeal to you?
-```
-
-The SAFE/RISK breakdown is critical. Design coherence is table stakes — every
-product in a category can be coherent and still look identical. The real question
-is: where do you take creative risks? Always propose at least 2 risks, each with
-a clear rationale for why the risk is worth taking and what the user gives up.
-
-Iterate until the user is happy. The risk appetite here informs which font, color,
-and spacing options you propose next.
-
-### Coherence Validation
-
-After 3-pre is approved, and again after each subsequent dimension (3a, 3b, 3c),
-check if the user's choices still cohere. Flag mismatches with a gentle nudge,
-never block:
-
-- Brutalist/Minimal aesthetic + expressive motion → "Heads up: brutalist aesthetics
-  usually pair with minimal motion. Your combo is unusual, which is fine if
-  intentional. Want me to suggest motion that fits, or keep it?"
-- Expressive color + restrained decoration → "Bold palette with minimal decoration
-  can work, but the colors will carry a lot of weight. Want me to suggest
-  decoration that supports the palette?"
-- Creative-editorial layout + data-heavy product → "Editorial layouts are gorgeous
-  but can fight data density. Want me to show how a hybrid approach keeps both?"
-- Always accept the user's final choice. Never refuse to proceed.
-
-### 3a: Typography (visual — build 4 options in Figma)
-
-**Before proposing:** Read `~/.claude/skills/mint-system/FONT_KNOWLEDGE_BASE.md`.
-
-**CRITICAL — the 4 directions must use DIFFERENT font classifications.**
-If the aesthetic is "luxury editorial", do NOT propose 4 serif options. Instead:
-- Direction A: the expected category choice (e.g., classic serif for luxury)
-- Direction B: a different classification entirely (e.g., geometric sans — clean,
-  modern, unexpected for the category but could work)
-- Direction C: a contrast/tension pairing (e.g., heavy grotesque display + refined
-  serif body — the friction IS the personality)
-- Direction D: a wild card from a different era or aesthetic (e.g., art deco display,
-  slab serif, humanist, or something that breaks the mold entirely)
-
-If all 4 directions use the same font classification (all serifs, all sans, all
-geometric), you've failed to diverge. The user picked an aesthetic direction —
-they don't need 4 versions of the obvious choice. They need to see what
-UNEXPECTED typography could look like in their space.
+**CRITICAL — the 4 directions must use DIFFERENT font classifications AND different
+color temperatures.** Do NOT propose 4 sans-serif-on-white directions. Instead:
+- Direction A: the expected category choice (type + color that fits the space)
+- Direction B: a different classification entirely (unexpected type + shifted color temp)
+- Direction C: a contrast/tension pairing (the friction IS the personality)
+- Direction D: a wild card from a different era or aesthetic
 
 Draw from the knowledge base — not from your defaults.
 
-**First:** Build all 4 typography directions as Figma specimens (one `use_figma`
-call per direction frame). Then present the AskUserQuestion.
-
 ```javascript
 // TARGET: mint-system file (fileKey: ...)
-// Create "01 — Typography Options" page
-// One use_figma call PER option frame (4 calls total)
+// Create "01 — Direction Options" page
+// One use_figma call PER direction frame (4 calls total)
 //
-// Each frame (compact auto-layout, NOT fixed 1400px):
-//   Display font: hero (72px), H1 (48px), H2 (32px)
-//   Body font: body (16px), small (14px), caption (13px)
-//   Data font: monospace samples, tabular numbers
+// Each frame (compact auto-layout, NOT fixed 1400px) shows:
+//   BACKGROUND: the proposed background color (not always white)
+//   TYPOGRAPHY: Display (72px), H1 (48px), H2 (32px), Body (16px), Caption (13px)
+//   COLOR: Primary swatch strip, neutral strip, accent swatch
+//   IN CONTEXT: A mini card or button showing type + color working together
+//   DENSITY: Spacing between elements conveys the density philosophy
 //   Use real content from the product context (not lorem ipsum)
 //   Load each font via figma.loadFontAsync with try/catch (Inter fallback)
 //   Values are HARDCODED — tokenization happens in Phase 4
@@ -482,86 +426,91 @@ call per direction frame). Then present the AskUserQuestion.
 // Return frame node IDs
 ```
 
-After building, present AskUserQuestion with the directions AS the options:
+After building, present the SAFE/RISK proposal as text, then AskUserQuestion:
+
+```
+Based on [product context] and [research findings]:
+
+SAFE CHOICES (category baseline):
+  - [2-3 decisions visible across the directions that match convention]
+
+RISKS (where the product gets its own face):
+  - [2-3 deliberate departures, referencing which direction(s) embody them]
+  - For each: what it is, why it works, what you gain, what it costs
+```
+
 ```json
 {
   "questions": [{
-    "header": "Typography",
-    "question": "All 4 typography directions are in Figma on the '01 — Typography Options' page. Compare them side-by-side — which direction feels right, or mix and match elements from different ones?",
+    "header": "Direction",
+    "question": "All 4 directions are in Figma on '01 — Direction Options'. Each shows type + color + density together. Which direction feels right? You can also mix — e.g., 'B's typography with C's color palette'.",
     "multiSelect": false,
     "options": [
-      { "label": "[Direction A name] (Recommended)", "description": "[Display font] + [Body font] + [Data font]. [One sentence: what it feels like]" },
-      { "label": "[Direction B name]", "description": "[Fonts]. [One sentence]" },
-      { "label": "[Direction C name]", "description": "[Fonts]. [One sentence]" },
-      { "label": "[Direction D name]", "description": "[Fonts]. [One sentence]" }
+      { "label": "[Direction A name] (Recommended)", "description": "[Display font] + [primary color]. [One sentence: what it feels like]" },
+      { "label": "[Direction B name]", "description": "[Font] + [color]. [One sentence]" },
+      { "label": "[Direction C name]", "description": "[Font] + [color]. [One sentence]" },
+      { "label": "[Direction D name]", "description": "[Font] + [color]. [One sentence]" }
     ]
   }]
 }
 ```
 
-User can pick one, type "mix A's display with C's body", or ask for more options.
+User can pick one, mix elements across directions, or ask for more options.
 
 **If user rejects all directions — DO NOT use AskUserQuestion.** This is a
 conversation moment, not a structured decision. Respond in plain text with:
 
 1. **Your diagnosis** — be opinionated about what went wrong. Don't ask "too heavy
    or too light?" Say something specific: "I think the problem is none of these feel
-   like [their brand] — the serifs are too traditional/editorial and the sans is too
-   corporate. Your brand lives closer to [specific reference] than to [other reference]."
+   like [their brand] — the serifs are too traditional and the colors too warm.
+   Your brand lives closer to [specific reference] than to [other reference]."
 
-2. **Name 2-3 real brands** whose typography feels closer to what they might want.
-   If you did research in Phase 2, reference it. If you didn't, offer to do research
-   now: "Want me to look at what [their space] brands actually use? That'll give us
-   real reference points instead of me guessing."
+2. **Name 2-3 real brands** whose aesthetic feels closer to what they might want.
+   If you did research in Phase 2, reference it.
 
 3. **Propose a specific pivot** — not "what direction do you want?" but "I think we
-   should try [specific font] paired with [specific font] — it has [quality] which
+   should try [specific font] with [specific color palette] — it has [quality] which
    matches [their brand]. Want me to build that?"
 
-The goal is to narrow, not re-open. Generic follow-ups ("too heavy? too light?")
-waste the user's time. Be wrong and specific over vague and safe.
+The goal is to narrow, not re-open. Be wrong and specific over vague and safe.
 
-Iterate until approved.
+Iterate until a direction is approved.
 
-### 3b: Color (visual — build 4 options in Figma)
+### 3b: Refinement (type variations OR color variations)
 
-Same pattern. Build 4 palettes in Figma (one call per frame), then present:
+After the user picks a direction, decompose and refine the weaker dimension.
 
-```javascript
-// TARGET: mint-system file (fileKey: ...)
-// Create "02 — Color Options" page
-// One use_figma call PER option frame (4 calls total)
-//
-// Each frame shows:
-//   Primary scale (50-950 swatches), Neutral scale, Accent colors
-//   Semantic colors (success, warning, error, info)
-//   Colors in context: text on backgrounds, buttons, cards
-//   Contrast pairings (text color on each background)
-//   Use approved typography from 3a
-//   HARDCODED values
-//
-// Return frame node IDs
-```
+**If the user loved the typography but was unsure about the color:**
+Build 4 color palette variations that all work with the approved type. Show them
+in Figma with the approved fonts applied. This is now a focused color decision
+with type already locked.
 
-```json
-{
-  "questions": [{
-    "header": "Color",
-    "question": "All 4 color palettes are in Figma on '02 — Color Options'. Which palette feels right? You can also cherry-pick — e.g., 'B's primaries with D's neutrals'.",
-    "multiSelect": false,
-    "options": [
-      { "label": "[Palette A name] (Recommended)", "description": "[Primary color] + [neutral tone]. [One sentence]" },
-      { "label": "[Palette B name]", "description": "[Colors]. [One sentence]" },
-      { "label": "[Palette C name]", "description": "[Colors]. [One sentence]" },
-      { "label": "[Palette D name]", "description": "[Colors]. [One sentence]" }
-    ]
-  }]
-}
-```
+**If the user loved the color but was unsure about the typography:**
+Build 4 typography variations that all work with the approved color palette. Show
+them in Figma with the approved colors applied. This is now a focused type decision
+with color already locked.
+
+**If the user loved both type AND color from the chosen direction:**
+Skip 3b entirely. Both are locked. Move to 3c.
+
+**If the user mixed ("B's type with C's color"):**
+Build one combined specimen to verify the mix works visually. If it coheres,
+lock both. If something clashes, propose adjustments.
+
+### Coherence Validation
+
+After 3a and 3b, check if the approved choices cohere. Flag mismatches with a
+gentle nudge, never block:
+
+- Expressive color + restrained decoration → "Bold palette with minimal decoration
+  can work, but the colors will carry a lot of weight."
+- Creative-editorial layout + data-heavy product → "Editorial layouts are gorgeous
+  but can fight data density."
+- Always accept the user's final choice. Never refuse to proceed.
 
 ### 3c: Spacing + Shape (conversational — no Figma specimens)
 
-Spacing and shape are conversational, like motion. The spacing scale is just numbers.
+Spacing and shape are conversational. The spacing scale is just numbers.
 Shape philosophy ("round vs sharp") is a direction — specific radius and border values
 are discovered by mint-lib during the DNA phase, not locked here.
 
@@ -579,19 +528,16 @@ Present as text with SAFE/RISK format. Iterate until approved.
 
 ### 3-drill: Drill-downs (only if user requests adjustments)
 
-When the user wants to change a specific section after initial approval, go deep
+When the user wants to change a specific section after approval, go deep
 on that section rather than re-proposing everything:
 
-- **Fonts:** Present 3-5 specific candidates with rationale from the knowledge base.
-  Explain what each evokes. Build a new specimen in Figma for each candidate.
-- **Colors:** Present 2-3 palette options with hex values. Explain the color theory
-  reasoning. Build comparison swatches in Figma.
-- **Aesthetic:** Walk through which directions fit their product and why. Reference
-  research findings if available.
-- **Layout/Spacing:** Present approaches with concrete tradeoffs for their product type.
+- **Fonts:** Present 3-5 specific candidates. Build a new specimen for each.
+- **Colors:** Present 2-3 palette options. Build comparison swatches.
+- **Aesthetic:** Walk through which directions fit their product and why.
+- **Layout/Spacing:** Present approaches with concrete tradeoffs.
 
 Each drill-down is one focused conversation + Figma specimen. After the user decides,
-re-run coherence validation against the rest of the system.
+re-run coherence validation.
 
 ### 3d: Motion — SKIP
 
