@@ -542,9 +542,47 @@ pick one, see the next layer rendered with it, and pick again.
 **Show type on NEUTRAL backgrounds (white or near-white).** Do NOT introduce color
 into type specimens. Color is decided in 3c.
 
-**Do NOT use AskUserQuestion for type selection.** Typography is iterative. Present
-options in plain text with numbers (1-4), state your recommendation, and let the
-user respond naturally: pick a number, ask for alternatives, discuss.
+**Selection pattern (same for each layer):**
+
+After building 4 options in Figma, use a 2-tab AskUserQuestion. Tab 1 picks the
+direction, Tab 2 decides whether to lock or iterate in that direction.
+
+```json
+{
+  "questions": [
+    {
+      "header": "Pick",
+      "question": "[Layer-specific context]. Review the 4 options on the Typography page in Figma. Which direction feels right?",
+      "multiSelect": false,
+      "options": [
+        { "label": "A: [Font name] (Recommended)", "description": "[Classification]. [Why it fits the vibe lock]" },
+        { "label": "B: [Font name]", "description": "[Classification]. [Why it fits]" },
+        { "label": "C: [Font name]", "description": "[Classification]. [Why it fits]" },
+        { "label": "D: [Font name]", "description": "[Classification]. [Why it fits]" }
+      ]
+    },
+    {
+      "header": "Lock",
+      "question": "Happy with your pick, or want to explore more in that direction?",
+      "multiSelect": false,
+      "options": [
+        { "label": "Lock it", "description": "This is the one. Move on to the next layer." },
+        { "label": "More like this", "description": "Right direction, show me 4 similar alternatives." },
+        { "label": "None of these", "description": "Wrong direction entirely. I'll explain what I'm after." }
+      ]
+    }
+  ]
+}
+```
+
+- **"Lock it"** → lock the font, move to next layer
+- **"More like this"** → build 4 fonts in the same classification/feel as their
+  pick, present another AskUserQuestion. This narrows instead of re-opening.
+- **"None of these"** → drop to conversational. Diagnose what went wrong, name
+  2-3 real brands that match better, propose specific pivots. Narrow, don't re-open.
+
+**Always provide exactly 4 options.** AskUserQuestion defaults to showing 3 if you
+only provide 3. Always give 4 to fill the layout.
 
 #### 3b-i: Display font (the personality)
 
@@ -575,14 +613,8 @@ If all 4 use the same classification, you've failed to diverge.
 // Return frame node IDs
 ```
 
-Present the 4 options in plain text. Name each font, its classification, why it
-fits the vibe lock. State your recommendation. The user picks by number, asks
-for alternatives, or discusses.
-
-**If user rejects all:**
-1. Diagnose what went wrong — be specific, not "too heavy?"
-2. Name 2-3 real brands whose display type matches the vibe lock better
-3. Propose specific pivot fonts. Narrow, don't re-open.
+After building, use the **selection pattern** above (Pick + Lock AskUserQuestion).
+Label options A through D. State your recommendation.
 
 Iterate until display font is locked.
 
@@ -606,21 +638,21 @@ The user sees the pairing live — display heading above, body text below.
 // Return frame node IDs
 ```
 
-Present options with the pairing rationale — why this body font complements
-(or deliberately contrasts with) the locked display font. The user picks by
-number, asks for alternatives, or discusses.
+After building, use the **selection pattern** above (Pick + Lock AskUserQuestion).
+Label options A through D. Explain pairing rationale — why each body font
+complements (or deliberately contrasts with) the locked display font.
 
 Iterate until body font is locked.
 
 #### 3b-iii: Data font (the functional layer)
 
-Build 2-3 monospace/tabular options in Figma, shown alongside the locked
+Build 4 monospace/tabular options in Figma, shown alongside the locked
 display + body fonts.
 
 ```javascript
 // TARGET: mint-system file (fileKey: ...)
 // Same "01 — Typography" page
-// One use_figma call PER data option (2-3 calls)
+// One use_figma call PER data option (4 calls)
 //
 // Each option frame:
 //   TOP: locked display at H3 (24px) + locked body at body (16px)
@@ -634,8 +666,8 @@ display + body fonts.
 // Return frame node IDs
 ```
 
-Data font is usually the fastest decision — most products only have 2-3
-credible monospace options. Present options, state recommendation, iterate.
+After building, use the **selection pattern** above (Pick + Lock AskUserQuestion).
+Label options A through D.
 
 #### After all 3 layers are locked
 
@@ -693,16 +725,13 @@ storage. See "oklch Scale Generation" in Phase 4 for the conversion math.
 // Return frame node IDs
 ```
 
-After building, present the 4 palettes in plain text. For each, name the colors
-and explain how it matches the vibe lock's temperature and emotion. State your
-recommendation. Then tell the user to review in Figma and respond:
-- Pick a palette by number (1-4)
-- Cherry-pick across palettes ("primary from A, neutrals from C")
-- Ask for different options ("too muted, need more contrast")
+After building, use the same **Pick + Lock** AskUserQuestion pattern as type
+selection. Label palettes A through D. Explain how each matches the vibe lock's
+temperature and emotion. State your recommendation.
 
-**Do NOT use AskUserQuestion for color selection.** Same rationale as type — color
-is iterative. The user will want to adjust, mix palettes, shift warmth. Conversation
-is the right tool.
+- **"Lock it"** → lock the palette, move to spacing
+- **"More like this"** → build 4 palettes in the same temperature/hue family
+- **"None of these"** → drop to conversational, diagnose and narrow
 
 Iterate until color is locked.
 
