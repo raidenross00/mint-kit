@@ -531,60 +531,128 @@ about whatever is still ambiguous. Max 2 rounds of AskUserQuestion for vibe lock
 - Color specimens (3c): "Does this palette feel [temperature] and [emotion]?"
 - Spacing (3d): "Does this density match [pace] and [weight]?"
 
-### 3b: Type Specimens (4 directions — judged against vibe lock)
+### 3b: Type Specimens (layered funnel — display → body → data)
 
 **Before building:** Read `~/.claude/skills/mint-kit/mint-system/FONT_KNOWLEDGE_BASE.md`.
 
-Build 4 type directions in Figma. Each must FEEL like the vibe lock words.
-One `use_figma` call per direction frame.
+Type is decided in 3 layers on a single Figma page ("01 — Typography"). Each layer
+builds on the locked previous choice. The user never picks 3 fonts at once — they
+pick one, see the next layer rendered with it, and pick again.
 
-**CRITICAL — the 4 directions must use DIFFERENT font classifications.**
-- Direction A: the expected category choice for the vibe
-- Direction B: a different classification entirely
-- Direction C: a contrast/tension pairing (the friction IS the personality)
-- Direction D: a wild card from a different era or aesthetic
+**Show type on NEUTRAL backgrounds (white or near-white).** Do NOT introduce color
+into type specimens. Color is decided in 3c.
+
+**Do NOT use AskUserQuestion for type selection.** Typography is iterative. Present
+options in plain text with numbers (1-4), state your recommendation, and let the
+user respond naturally: pick a number, ask for alternatives, discuss.
+
+#### 3b-i: Display font (the personality)
+
+Build 4 display font options in Figma. One `use_figma` call per option.
+Each option shows the font at hero (72px), H1 (48px), H2 (32px) sizes.
+Use real content from the product context, not lorem ipsum.
+
+**CRITICAL — the 4 options must use DIFFERENT font classifications.**
+- Option 1: the expected category choice for the vibe
+- Option 2: a different classification entirely
+- Option 3: a contrast/tension choice (the friction IS the personality)
+- Option 4: a wild card from a different era or aesthetic
 
 If all 4 use the same classification, you've failed to diverge.
 
-**Show type on NEUTRAL backgrounds (white or near-white).** Do NOT introduce color
-into type specimens. The vibe lock's Temperature and Emotion guide your font choices,
-but color is decided in 3c.
-
 ```javascript
 // TARGET: mint-system file (fileKey: ...)
-// Create "01 — Typography Options" page
-// One use_figma call PER option frame (4 calls total)
+// Create "01 — Typography" page
+// One use_figma call PER display option (4 calls)
 //
-// Each frame (compact auto-layout, NOT fixed 1400px):
-//   Display font: hero (72px), H1 (48px), H2 (32px)
-//   Body font: body (16px), small (14px), caption (13px)
-//   Data font: monospace samples, tabular numbers
-//   NEUTRAL BACKGROUND ONLY — no color, just type
-//   Use real content from the product context (not lorem ipsum)
-//   Load each font via figma.loadFontAsync with try/catch (Inter fallback)
-//   Values are HARDCODED — tokenization happens in Phase 4
+// Each option frame (compact auto-layout):
+//   Font at hero (72px), H1 (48px), H2 (32px)
+//   NEUTRAL BACKGROUND ONLY
+//   Real product content
+//   Load font via figma.loadFontAsync with try/catch (Inter fallback)
+//   HARDCODED values
 //
 // Return frame node IDs
 ```
 
-After building, present the 4 directions in plain text. For each, name the fonts
-and explain why it fits the vibe lock. State your recommendation and why. Then
-tell the user to review the specimens in Figma and respond:
-- Pick a direction by number (1-4)
-- Mix and match ("display from B, body from C")
-- Ask for different options ("none of these, too heavy")
-
-**Do NOT use AskUserQuestion for type selection.** Typography is iterative — the user
-will almost certainly want to discuss, swap fonts between directions, or ask for
-new options. AskUserQuestion forces a single pick from a fixed list, which is wrong
-for this step. Conversational back-and-forth is the right tool here.
+Present the 4 options in plain text. Name each font, its classification, why it
+fits the vibe lock. State your recommendation. The user picks by number, asks
+for alternatives, or discusses.
 
 **If user rejects all:**
 1. Diagnose what went wrong — be specific, not "too heavy?"
-2. Name 2-3 real brands whose typography matches the vibe lock better
-3. Propose a specific pivot font pairing. Narrow, don't re-open.
+2. Name 2-3 real brands whose display type matches the vibe lock better
+3. Propose specific pivot fonts. Narrow, don't re-open.
 
-Iterate until type is locked.
+Iterate until display font is locked.
+
+#### 3b-ii: Body font (the workhorse)
+
+Build 4 body font options in Figma, each shown UNDERNEATH the locked display font.
+The user sees the pairing live — display heading above, body text below.
+
+```javascript
+// TARGET: mint-system file (fileKey: ...)
+// Same "01 — Typography" page
+// One use_figma call PER body option (4 calls)
+//
+// Each option frame:
+//   TOP: locked display font at H2 (32px) — same text across all 4
+//   BELOW: body candidate at body (16px), small (14px), caption (13px)
+//   Show a real paragraph of product content at body size
+//   NEUTRAL BACKGROUND ONLY
+//   HARDCODED values
+//
+// Return frame node IDs
+```
+
+Present options with the pairing rationale — why this body font complements
+(or deliberately contrasts with) the locked display font. The user picks by
+number, asks for alternatives, or discusses.
+
+Iterate until body font is locked.
+
+#### 3b-iii: Data font (the functional layer)
+
+Build 2-3 monospace/tabular options in Figma, shown alongside the locked
+display + body fonts.
+
+```javascript
+// TARGET: mint-system file (fileKey: ...)
+// Same "01 — Typography" page
+// One use_figma call PER data option (2-3 calls)
+//
+// Each option frame:
+//   TOP: locked display at H3 (24px) + locked body at body (16px)
+//   BELOW: data candidate showing:
+//     - Code snippet or data sample (14px)
+//     - Tabular numbers: "1,234,567.89" aligned
+//     - Mixed context: body text with inline code
+//   NEUTRAL BACKGROUND ONLY
+//   HARDCODED values
+//
+// Return frame node IDs
+```
+
+Data font is usually the fastest decision — most products only have 2-3
+credible monospace options. Present options, state recommendation, iterate.
+
+#### After all 3 layers are locked
+
+The "01 — Typography" page now shows the full journey: display options at top,
+body options (with display) in the middle, data options (with both) at the bottom.
+This IS the decision record — the user can scroll back and see why each choice
+was made.
+
+Confirm the full stack in plain text:
+```
+TYPE LOCKED:
+  Display: [font] — [why]
+  Body:    [font] — [why it pairs]
+  Data:    [font] — [why it works]
+```
+
+Move to 3c.
 
 ### 3c: Color Specimens (4 palettes — with locked type, judged against vibe lock)
 
