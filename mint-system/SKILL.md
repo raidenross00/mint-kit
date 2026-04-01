@@ -412,10 +412,12 @@ on YOUR output in this step only. If the user says "I'm thinking mint green," th
 input you use later in 3c (color). Don't echo it back as part of the vibe lock.
 
 **Propose ONE vibe lock as your recommendation.** Not 4 options. You're a designer
-with an opinion. The user reacts: "yes," "too cold," "more playful." You adjust and
-re-propose. Iterate until locked.
+with an opinion. Present it, then ask SPECIFIC questions to refine — never "does
+this look good?" or "react to this."
 
-**Template — fill in every field, argue for every word:**
+**Step 1: Present the vibe lock template.**
+
+Fill in every field, argue for every word:
 
 ```
 VIBE LOCK (Recommended):
@@ -445,7 +447,7 @@ VIBE LOCK (Recommended):
   NOT:         [3-5 things this is definitely NOT]
 ```
 
-**After the template, present the SAFE/RISK breakdown (system-level, gstack-style):**
+**Step 2: Present the SAFE/RISK breakdown:**
 
 ```
 SAFE CHOICES (category baseline — your users expect these):
@@ -456,11 +458,67 @@ RISKS (where your product gets its own face):
   - [2-3 deliberate departures from the category's emotional baseline]
   - For each risk: what it is, why it works, what you gain, what it costs
   - Risks are OPPORTUNITIES — frame them as "where you stand out," not warnings
-
-The safe choices keep you literate in your category. The risks are where
-your product becomes memorable. Which risks appeal to you? Want to see
-different ones?
 ```
+
+**Step 3: Ask structured questions to lock each dimension.**
+
+Immediately after presenting the vibe lock + SAFE/RISK, use AskUserQuestion to
+narrow down the specific decisions. Do NOT say "react to this" or "how does this
+feel?" — ask bounded questions with concrete options.
+
+```json
+{
+  "questions": [
+    {
+      "header": "Emotion",
+      "question": "I proposed [word 1], [word 2], [word 3] as the emotional DNA. Each word constrains what fonts and colors are even eligible. Which words land and which feel off?",
+      "multiSelect": false,
+      "options": [
+        { "label": "Lock it (Recommended)", "description": "All three words feel right. Move on." },
+        { "label": "Swap [word X]", "description": "[Alternative word] fits better because [reason] — keeps the other two." },
+        { "label": "Too [direction]", "description": "The overall feel is too [cold/warm/serious/playful]. Shift toward [opposite]." },
+        { "label": "Wrong axis entirely", "description": "These words describe [what they describe] but my product is more about [different thing]." }
+      ]
+    },
+    {
+      "header": "Temperature",
+      "question": "I proposed [cool/warm/neutral]. This decides whether your palette leans blue-gray or cream-warm or dead-center. Right call?",
+      "multiSelect": false,
+      "options": [
+        { "label": "[Proposed] (Recommended)", "description": "[One sentence — why this temperature matches the emotion words]" },
+        { "label": "Warmer", "description": "Push toward [warmer territory]. Feels more [quality]." },
+        { "label": "Cooler", "description": "Push toward [cooler territory]. Feels more [quality]." },
+        { "label": "Neutral", "description": "No temperature lean. Pure gray foundation, accent color carries the personality." }
+      ]
+    },
+    {
+      "header": "Risks",
+      "question": "Three opportunities to stand out from the category. Pick the risks worth taking — or none if you want to play it straight.",
+      "multiSelect": true,
+      "options": [
+        { "label": "[Risk 1 name] (Recommended)", "description": "[What it is]. Gain: [gain]. Cost: [cost]." },
+        { "label": "[Risk 2 name]", "description": "[What it is]. Gain: [gain]. Cost: [cost]." },
+        { "label": "[Risk 3 name]", "description": "[What it is]. Gain: [gain]. Cost: [cost]." },
+        { "label": "Play it safe", "description": "No risks. Stay within category conventions. Reliable but not distinctive." }
+      ]
+    }
+  ]
+}
+```
+
+**Adapt the questions to what needs deciding.** The template above covers the common
+case. But if the user's initial prompt already locked temperature ("I want it warm"),
+don't ask about temperature — replace that tab with Weight or Pace instead. Only ask
+about dimensions that are genuinely undecided.
+
+**After the user answers:** Update the vibe lock to reflect their choices. If they
+swapped a word or adjusted temperature, present the UPDATED lock in plain text
+(not another AskUserQuestion) and confirm: "Vibe lock updated: [show changes].
+Locking this and moving to type specimens." If they typed a custom answer that
+changes multiple things, present the updated lock and ask ONE more focused question
+about whatever is still ambiguous. Max 2 rounds of AskUserQuestion for vibe lock.
+
+**If the user picks "Lock it" on all tabs:** Done. Move to 3b immediately.
 
 **The vibe lock becomes the acceptance criteria for all downstream steps:**
 - Type specimens (3b): "Does this font feel [emotion] at [weight] with [pace]?"
