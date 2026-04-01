@@ -628,11 +628,19 @@ Build 4 display font options in Figma. One `use_figma` call per option.
 Each option shows the font at hero (72px), H1 (48px), H2 (32px) sizes.
 Use real content from the product context, not lorem ipsum.
 
+**Research must inform font selection.** If Phase 2 research was done, your font
+choices should reference what you found. If you discovered that Midori uses clean
+Japanese typography, propose a font that captures that quality. If competitors all
+use geometric sans-serifs, one option should deliberately break from that. If a
+reference brand's type left an impression during research, name it when explaining
+your pick: "This captures the editorial quality I saw in [brand]." Research that
+doesn't influence the proposals was wasted time.
+
 **CRITICAL — the 4 options must use DIFFERENT font classifications.**
-- Option 1: the expected category choice for the vibe
-- Option 2: a different classification entirely
-- Option 3: a contrast/tension choice (the friction IS the personality)
-- Option 4: a wild card from a different era or aesthetic
+- Option A: the expected category choice for the vibe
+- Option B: a different classification entirely
+- Option C: a contrast/tension choice (the friction IS the personality)
+- Option D: a wild card from a different era or aesthetic
 
 If all 4 use the same classification, you've failed to diverge.
 
@@ -759,6 +767,12 @@ Move to 3c.
 Build 4 color palettes in Figma WITH the approved type applied. The user sees
 type + color together. Each palette must feel like the vibe lock's Temperature
 and Emotion.
+
+**Research must inform color selection.** Same rule as type — if Phase 2 research
+was done, reference what you found. If competitors all use cool blue-gray palettes,
+one option should deliberately differ. If a reference brand's warm whites or
+particular accent color stood out, name it: "This captures the warmth I saw in
+[brand]'s approach." Don't do research then propose generic palettes.
 
 **Generate scales using oklch math.** Define the hero color (primary-500) as an
 oklch value (L%, C, H). Generate the full 50-950 scale by stepping Lightness
