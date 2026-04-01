@@ -567,24 +567,19 @@ but color is decided in 3c.
 // Return frame node IDs
 ```
 
-After building, present AskUserQuestion:
-```json
-{
-  "questions": [{
-    "header": "Typography",
-    "question": "4 type directions on '01 — Typography Options'. Each should feel [vibe lock emotion words]. Which direction matches the vibe, or mix and match?",
-    "multiSelect": false,
-    "options": [
-      { "label": "[Direction A name] (Recommended)", "description": "[Display + Body + Data fonts]. [One sentence: why it matches the vibe lock]" },
-      { "label": "[Direction B name]", "description": "[Fonts]. [Why it matches]" },
-      { "label": "[Direction C name]", "description": "[Fonts]. [Why it matches]" },
-      { "label": "[Direction D name]", "description": "[Fonts]. [Why it matches]" }
-    ]
-  }]
-}
-```
+After building, present the 4 directions in plain text. For each, name the fonts
+and explain why it fits the vibe lock. State your recommendation and why. Then
+tell the user to review the specimens in Figma and respond:
+- Pick a direction by number (1-4)
+- Mix and match ("display from B, body from C")
+- Ask for different options ("none of these, too heavy")
 
-**If user rejects all — DO NOT use AskUserQuestion.** Respond in plain text:
+**Do NOT use AskUserQuestion for type selection.** Typography is iterative — the user
+will almost certainly want to discuss, swap fonts between directions, or ask for
+new options. AskUserQuestion forces a single pick from a fixed list, which is wrong
+for this step. Conversational back-and-forth is the right tool here.
+
+**If user rejects all:**
 1. Diagnose what went wrong — be specific, not "too heavy?"
 2. Name 2-3 real brands whose typography matches the vibe lock better
 3. Propose a specific pivot font pairing. Narrow, don't re-open.
@@ -630,21 +625,16 @@ storage. See "oklch Scale Generation" in Phase 4 for the conversion math.
 // Return frame node IDs
 ```
 
-```json
-{
-  "questions": [{
-    "header": "Color",
-    "question": "4 color palettes on '02 — Color Options', each with your approved type. Which palette feels [vibe lock temperature] and [vibe lock emotion]? Cherry-pick across palettes if you want.",
-    "multiSelect": false,
-    "options": [
-      { "label": "[Palette A name] (Recommended)", "description": "[Primary + neutral tone]. [Why it matches the vibe lock]" },
-      { "label": "[Palette B name]", "description": "[Colors]. [Why it matches]" },
-      { "label": "[Palette C name]", "description": "[Colors]. [Why it matches]" },
-      { "label": "[Palette D name]", "description": "[Colors]. [Why it matches]" }
-    ]
-  }]
-}
-```
+After building, present the 4 palettes in plain text. For each, name the colors
+and explain how it matches the vibe lock's temperature and emotion. State your
+recommendation. Then tell the user to review in Figma and respond:
+- Pick a palette by number (1-4)
+- Cherry-pick across palettes ("primary from A, neutrals from C")
+- Ask for different options ("too muted, need more contrast")
+
+**Do NOT use AskUserQuestion for color selection.** Same rationale as type — color
+is iterative. The user will want to adjust, mix palettes, shift warmth. Conversation
+is the right tool.
 
 Iterate until color is locked.
 
