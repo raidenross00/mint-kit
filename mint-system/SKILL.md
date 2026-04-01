@@ -575,21 +575,39 @@ direction, Tab 2 decides whether to lock or iterate in that direction.
 ```
 
 - **"Lock it"** → lock the font, move to next layer
-- **"More like this"** → the user liked the VIBE of their pick, not just the
-  classification. Briefly name what you think they responded to (e.g., "You
-  liked the warmth and ink trap character of Bricolage — that tells me you
-  want personality in the letterforms, not just clean geometry.") Keep this
-  to 1-2 sentences — it's context for the next options, not a stopping point.
-  
-  Then build 4 NEW fonts (never repeat the one they picked):
-  - **A:** Same family or very close sibling (e.g., another grotesque from
-    the same foundry or era)
-  - **B:** Different classification, same vibe (e.g., picked a warm grotesque?
-    Try a humanist sans that's also warm)
-  - **C:** Different classification, same vibe (another angle — e.g., a
-    rounded geometric that gets warmth differently)
-  - **D:** Same vibe, genuine risk — a font that captures the feeling through
-    unexpected means (a serif that somehow feels like the grotesque they liked)
+- **"More like this"** → fire a SECOND AskUserQuestion asking what they
+  liked about it. Do NOT guess — let the user tell you. The options should
+  be specific traits of the font they picked, not generic categories.
+
+  ```json
+  {
+    "questions": [{
+      "header": "What hit?",
+      "question": "What pulled you toward [font name]? Knowing this helps me find the right alternatives instead of just more [classification]s.",
+      "multiSelect": true,
+      "options": [
+        { "label": "[Trait A]", "description": "[What this trait looks like in the font — specific, not abstract]" },
+        { "label": "[Trait B]", "description": "[Specific observation]" },
+        { "label": "[Trait C]", "description": "[Specific observation]" },
+        { "label": "[Trait D]", "description": "[Specific observation]" }
+      ]
+    }]
+  }
+  ```
+
+  The traits must be SPECIFIC to the font they picked. Examples for Bricolage
+  Grotesque: "Ink trap details" / "Heavy-but-not-clunky weight" / "Industrial
+  not corporate" / "Looks designed, not default". NOT generic labels like
+  "Personality" or "Warmth" or "Character."
+
+  **After they answer:** use their selected traits to find 4 NEW fonts (never
+  repeat the one they picked):
+  - **A:** Same family or very close sibling
+  - **B:** Different classification, same traits (e.g., they liked ink traps?
+    Try a serif with visible construction details)
+  - **C:** Different classification, another angle on the same traits
+  - **D:** Same traits, genuine risk — unexpected font that captures the
+    feeling through completely different means
   Build specimens, present another Pick + Lock AskUserQuestion.
 
 **If user picks "Type something" or "Chat about this"** (auto-added options) →
