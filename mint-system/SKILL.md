@@ -131,20 +131,39 @@ starting context for Phase 3. If they say fresh, proceed normally.
 Do NOT show design files from other projects. Ever. The user ran /mint-system in
 this directory for this project.
 
-**Tab 1 — header: "Product" or "Brand vibe":**
+**CRITICAL — Options must answer the question asked.** If your question asks "what
+type of product is this?", the options must be product types ("Marketing site",
+"Tool UI", "Docs site"). NOT vibes, NOT research preferences, NOT meta-actions.
+Every option should be a valid direct answer to the question text. If the question
+and options don't match, you've built a broken form.
 
-Use "Product" if you need basic info. Use "Brand vibe" if the user's prompt
-already told you what it is and you can propose opinionated directions.
+**Tab 1 — header: "Product" or "Research":**
 
-If you need basic info (user prompt was vague):
+If you STILL need to know what the product is (user's prompt didn't say):
 ```json
 {
   "header": "Product",
-  "question": "Tell me about this brand. [Echo their words back]... who's the customer? What's the price point? Is this a Shopify store, a marketing site, a lookbook?",
+  "question": "What will this design system dress? The token choices change depending on the surface.",
   "multiSelect": false,
   "options": [
-    { "label": "Research my competitors (Recommended)", "description": "Search for real brands in MY industry, study their sites, then propose something grounded" },
-    { "label": "Skip research", "description": "Faster — you'll propose from general design knowledge instead" }
+    { "label": "Marketing site", "description": "Landing pages, hero sections, conversion flows. Editorial feel." },
+    { "label": "Tool / app UI", "description": "Dashboards, forms, data tables. Functional, dense." },
+    { "label": "Docs / developer site", "description": "Documentation, code samples, guides. Readable, structured." },
+    { "label": "Component library", "description": "Storybook-style showcase. The tokens ARE the product." }
+  ]
+}
+```
+
+If you already know the product (user told you), skip this tab and go straight
+to research:
+```json
+{
+  "header": "Research",
+  "question": "Want me to study real products in your space before proposing directions? Seeing what competitors do makes proposals grounded instead of generic.",
+  "multiSelect": false,
+  "options": [
+    { "label": "Research first (Recommended)", "description": "I'll find 5-10 real brands, study their type + color + density, then propose." },
+    { "label": "Skip research", "description": "I'll propose from design knowledge. Faster but less grounded." }
   ]
 }
 ```
