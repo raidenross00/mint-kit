@@ -54,32 +54,31 @@ frame.y = 0;
 ```
 Each direction frame gets its own x position. Without this, all frames pile up at origin.
 
-### Frame Verification
-After `use_figma` calls that create frames, verify with a follow-up call.
-**Use fuzzy page matching** — the page name might have slight variations:
+### Frame Verification — TRUST THE CREATION CALL
+
+**Do NOT run a separate verification call after creating frames.** If `use_figma`
+returned successfully with frame IDs, the frames exist. Running a follow-up
+verification call often returns stale/empty results (MCP state lag between calls),
+which causes the model to panic, rebuild everything, create duplicates, then find
+and clean up its own mess. The user sees perfectly fine frames while the model
+spirals.
+
+**After creating frames:**
+1. The creation call returned IDs → frames exist. Trust it.
+2. Go straight to `get_screenshot` using the page node ID.
+3. If `get_screenshot` fails, tell the user to check Figma directly. Do NOT
+   rebuild the frames. They are there.
+4. **NEVER rebuild frames because a verification or screenshot call returned
+   empty/error.** The frames exist. The API is lagging.
+
+**If frames overlap at 0,0** (visible in screenshot or user reports it):
+THEN run a fix-up call to reposition:
 ```javascript
-// Find page by partial match, not exact name
-const page = figma.root.children.find(p => p.name.includes("Typography"))
-  || figma.root.children[figma.root.children.length - 1]; // fallback to last page
-const frames = page.children.filter(c => c.children && c.children.length > 0);
-return {
-  pageName: page.name,
-  count: frames.length,
-  names: frames.map(f => f.name),
-  positions: frames.map(f => ({ x: f.x, y: f.y }))
-};
-```
-If frames exist but are all at x:0, y:0 — they're overlapping. Reposition them:
-```javascript
+const page = figma.root.children.find(p => p.name.includes("Direction"));
+const frames = page.children.filter(c => c.type === "FRAME");
 frames.forEach((f, i) => { f.x = i * 800; f.y = 0; });
 ```
-**Using `get_screenshot`:** Do NOT use it immediately after `use_figma` — REST API
-sync lag causes "fetch failed" errors. Instead, use this sequence:
-1. Create frames with `use_figma`
-2. Verify frames exist with a follow-up `use_figma` call (Plugin API, instant)
-3. If frames exist and are positioned correctly, THEN use `get_screenshot` to
-   visually check the output. The sync delay from step 2 gives REST API time to catch up.
-4. If `get_screenshot` still fails, tell the user to check Figma directly.
+Only do this reactively (user reports overlap or screenshot shows it), not preemptively.
 
 ### Token Strategy — What Goes Where
 
