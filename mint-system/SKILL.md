@@ -576,16 +576,20 @@ direction, Tab 2 decides whether to lock or iterate in that direction.
 
 - **"Lock it"** → lock the font, move to next layer
 - **"More like this"** → the user liked the VIBE of their pick, not just the
-  classification. Extract what makes that font feel the way it does (weight,
-  contrast, rhythm, personality) and find 4 alternatives that hit the same feel
-  through DIFFERENT approaches:
-  - **A:** Same family/foundry (the literal "more of this" — closest match)
-  - **B:** Different classification, same vibe (e.g., picked a grotesque that
-    feels warm? Try a humanist sans that's also warm)
-  - **C:** Same vibe but a genuine risk — a font that captures the feeling
-    through unexpected means (a serif that somehow feels like the grotesque
-    they liked, a display font from a different era)
-  - **D:** Your new recommendation given what you now know about their taste
+  classification. Briefly name what you think they responded to (e.g., "You
+  liked the warmth and ink trap character of Bricolage — that tells me you
+  want personality in the letterforms, not just clean geometry.") Keep this
+  to 1-2 sentences — it's context for the next options, not a stopping point.
+  
+  Then build 4 NEW fonts (never repeat the one they picked):
+  - **A:** Same family or very close sibling (e.g., another grotesque from
+    the same foundry or era)
+  - **B:** Different classification, same vibe (e.g., picked a warm grotesque?
+    Try a humanist sans that's also warm)
+  - **C:** Different classification, same vibe (another angle — e.g., a
+    rounded geometric that gets warmth differently)
+  - **D:** Same vibe, genuine risk — a font that captures the feeling through
+    unexpected means (a serif that somehow feels like the grotesque they liked)
   Build specimens, present another Pick + Lock AskUserQuestion.
 
 **If user picks "Type something" or "Chat about this"** (auto-added options) →
