@@ -544,6 +544,13 @@ Type is decided in 3 layers on a single Figma page ("01 — Typography"). Each l
 builds on the locked previous choice. The user never picks 3 fonts at once — they
 pick one, see the next layer rendered with it, and pick again.
 
+**FIRST ROUND = MAXIMUM DIVERGENCE.** The first 4 options in every layer should be
+as different from each other as possible while still being relevant to the vibe lock
+and research. This is critical because the "More like this" iteration narrows toward
+what the user liked. If the first round is already narrow (4 sans-serifs), there's
+nowhere useful to iterate FROM. Cast the widest net first — serif, sans, slab, display,
+monospace — then the iterate step focuses on the direction they chose.
+
 **Show type on NEUTRAL backgrounds (white or near-white).** Do NOT introduce color
 into type specimens. Color is decided in 3c.
 
