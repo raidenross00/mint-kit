@@ -450,14 +450,20 @@ VIBE LOCK (Recommended):
 **Step 2: Present the SAFE/RISK breakdown:**
 
 ```
-SAFE CHOICES (category baseline — your users expect these):
-  - [2-3 vibe decisions that match what every product in this space does]
-  - [For each: why playing it safe here is the right call]
+SAFE CHOICES (proven, correct — these work for a reason):
+  - [2-3 vibe decisions grounded in what works in this category]
+  - [For each: WHY it works. Not "it's what everyone does" — what makes
+    it genuinely good. Safe ≠ boring. Safe = battle-tested and effective.]
+  - Safe choices should stand on their own as a strong design system.
+    If the user picks all safe and no risks, they get a GOOD system.
 
-RISKS (where your product gets its own face):
-  - [2-3 deliberate departures from the category's emotional baseline]
-  - For each risk: what it is, why it works, what you gain, what it costs
-  - Risks are OPPORTUNITIES — frame them as "where you stand out," not warnings
+RISKS (genuine departures — could be great, could cost you):
+  - [2-3 specific departures from category norms]
+  - For each risk: what it IS, what you GAIN, what it COSTS
+  - Be honest about the cost. If a risk has no real downside, it's not
+    a risk — move it to safe. Risks are things where reasonable designers
+    would disagree on whether it's the right call.
+  - Not sales pitches for "the cool version." Real tradeoffs.
 ```
 
 **Step 3: Ask structured questions to lock each dimension.**
@@ -493,13 +499,13 @@ feel?" — ask bounded questions with concrete options.
     },
     {
       "header": "Risks",
-      "question": "Three opportunities to stand out from the category. Pick the risks worth taking — or none if you want to play it straight.",
+      "question": "The safe choices above already make a strong system. These risks are genuine departures — each has a real upside AND a real cost. Take any that feel right, or take none.",
       "multiSelect": true,
       "options": [
-        { "label": "[Risk 1 name] (Recommended)", "description": "[What it is]. Gain: [gain]. Cost: [cost]." },
+        { "label": "[Risk 1 name]", "description": "[What it is]. Gain: [gain]. Cost: [cost]." },
         { "label": "[Risk 2 name]", "description": "[What it is]. Gain: [gain]. Cost: [cost]." },
         { "label": "[Risk 3 name]", "description": "[What it is]. Gain: [gain]. Cost: [cost]." },
-        { "label": "Play it safe", "description": "No risks. Stay within category conventions. Reliable but not distinctive." }
+        { "label": "None — safe is strong", "description": "The safe choices make a solid system. No departures needed." }
       ]
     }
   ]
