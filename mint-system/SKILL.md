@@ -695,14 +695,21 @@ Iterate until display font is locked.
 Build 4 body font options in Figma, each shown UNDERNEATH the locked display font.
 The user sees the pairing live — display heading above, body text below.
 
-**The 4 body options must vary in approach, not just brand:**
-- Option A: the natural pairing — same classification or foundry as the display font
-- Option B: a different classification that complements (e.g., humanist vs geometric)
-- Option C: a different classification, another angle on complementing the display
-- Option D: a genuine risk — a pairing that shouldn't work but might (e.g., a serif
-  body under a grotesque display, a rounded body under sharp headings)
+**MANDATORY DIVERGENCE — the 4 body options must use different classifications.**
+Before building, name the classification of each option. If you catch yourself
+writing 4 sans-serifs, STOP and replace at least 2. The whole point is to show
+the user what a serif body, a slab body, or a humanist body feels like under
+their locked display — not 4 flavors of the same thing.
 
-4 sans-serifs with slightly different letterforms is NOT enough divergence.
+- Option A: same classification as display (the natural, cohesive pairing)
+- Option B: DIFFERENT classification (e.g., serif body under sans display)
+- Option C: DIFFERENT classification (e.g., slab or humanist — another angle)
+- Option D: RISK — a pairing that shouldn't work but might (e.g., a monospaced
+  body, a soft serif under sharp grotesque headings, an old-style face)
+
+**Self-check before presenting:** list the 4 classifications. If 3+ are the same
+classification (geometric sans, grotesque, neo-grotesque — these are all sans),
+you've failed the divergence requirement. Go back and replace.
 
 ```javascript
 // TARGET: mint-system file (fileKey: ...)
