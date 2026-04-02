@@ -1,15 +1,16 @@
 ---
 name: mint-lib
-description: Build a complete component library in Figma from a /mint-system design system. Conversational DNA phase (Button, Input, Card with 5 visual options each), pattern extraction, then auto-generation of ~117 components across 4 tiers — all token-bound to the published mint-system library.
+description: Build a complete component library from a /mint-system design system. Conversational DNA phase (Button, Input, Card) explored via HTML specimens with real hover/focus states. Final components are built in Figma with full variant systems and token binding. ~117 components across 4 tiers.
 ---
 
-# /mint-lib — Component Library Builder (Figma-native)
+# /mint-lib — Component Library Builder
 
 Build a complete, production-quality component library through conversation. The 3 DNA
-components (Button, Input, Card) are built live in Figma with visual options. You pick,
-refine, and approve each one. Patterns are extracted and confirmed. Then ~117 remaining
-components are auto-generated from those patterns — all token-bound to your /mint-system
-design system.
+components (Button, Input, Card) are explored via HTML specimens with real hover/focus
+states. You pick, refine, and approve each direction. Final components are built in
+Figma with full variant systems and token binding. Patterns are extracted and confirmed.
+Then ~117 remaining components are auto-generated from those patterns — all token-bound
+to your /mint-system design system.
 
 Part of the **Mint Kit** series:
 1. `/mint-system` — tokens, variables, MINT.md
@@ -55,13 +56,13 @@ Read and follow all rules in `~/.claude/skills/mint-kit/shared/ASKUSER_API.md`.
 
 Read and follow all rules in `~/.claude/skills/mint-kit/shared/FIGMA_API.md`.
 
-### 50K Character Limit — Partition Boundaries for mint-lib
+### Partition Boundaries for mint-lib
 
-**Partition boundaries for DNA components:**
-- One `use_figma` call per direction frame (5 directions per component)
-- Never try to build all 5 in a single call
+See FIGMA_API.md for the global "try first, split on failure" rule.
 
-**Partition boundaries for auto-generation tiers:**
+Exploration specimens (DNA Phase Step 2) use HTML preview pages — no Figma calls.
+
+If you DO need to split auto-generation tiers:
 - Batch by component complexity: simple atoms together, complex organisms individually
 - Token binding calls separate from frame creation calls
 
@@ -349,14 +350,14 @@ For Card — vary these:
 - Header: same surface vs. distinct bg vs. accent bar vs. oversized type
 - Hover: lift vs. border change vs. fill shift vs. scale
 
-**First:** Build all 4 in Figma (one `use_figma` call per direction frame).
+**First:** Build all 4 as an HTML preview (see HTML Specimen Generation below).
 **Then:** Present AskUserQuestion with the directions AS the options:
 
 ```json
 {
   "questions": [{
     "header": "Direction",
-    "question": "All 4 [Component] directions are in Figma on the 'DNA — [Component] Options' page. Compare them side-by-side — which direction feels right, or mix and match elements from different ones?",
+    "question": "All 4 [Component] directions are in the HTML preview in your browser. Compare them side-by-side — which direction feels right, or mix and match elements from different ones?",
     "multiSelect": false,
     "options": [
       { "label": "[Dir A name] (Recommended)", "description": "[Philosophy in one sentence]. Best matches your [aesthetic] direction." },
@@ -381,23 +382,29 @@ Do NOT try to show every permutation (that's 300+ instances). Show enough to
 evaluate the philosophy: all types in default state at all sizes, then all states
 for Primary MD, then icon variants for Primary MD.
 
-```javascript
-// TARGET: component library file (fileKey: xyz789)
-// Create "DNA — Button Options" page
-// Build ONE direction per use_figma call
-// Compact auto-layout frame, NOT 1400px page
-//
-// Grid layout:
-//   Section 1: All types × Default state × All sizes (15 buttons)
-//   Section 2: Primary × All states × MD only (6 buttons)
-//   Section 3: All types × Hover state × MD only (5 buttons)
-//   Section 4: Icon variants × Primary × MD (with-icon, icon-only)
-//
-// Use MINT.md token VALUES as starting point but DIVERGE for this direction's
-// philosophy — different radius, padding, border treatment, shadow behavior
-//
-// Return frame node ID
-```
+#### HTML Specimen Generation — Component Directions
+
+Write to `~/Downloads/mint-kit/mint-specimen-{component}-directions.html`.
+Open in browser: `xdg-open` (Linux) or `open` (macOS).
+On iteration: overwrite, re-open.
+
+HTML structure:
+- Google Fonts loaded via `<link>` (locked display + body fonts from MINT.md)
+- 4-column CSS grid, one column per direction
+- Each column labeled A/B/C/D with direction name
+- REAL INTERACTIVE STATES via CSS:
+  - :hover, :active, :focus-visible, :disabled pseudo-classes
+  - CSS transitions for hover effects
+  - tabindex="0" on interactive elements for keyboard focus testing
+  - cursor: pointer on buttons, not-allowed on disabled
+- Use MINT.md token VALUES as starting point but DIVERGE for each direction's
+  philosophy — different radius, padding, border treatment, shadow behavior
+
+**Button grid layout per direction column:**
+- Section 1: All types x Default state x All sizes (15 buttons)
+- Section 2: Primary x All states x MD only (6 buttons — CSS handles hover/active/focus)
+- Section 3: All types x Hover state x MD only (5 buttons)
+- Section 4: Icon variants x Primary x MD (with-icon, icon-only)
 
 **For Input — each direction shows (~40-50 instances):**
 - Types: Text, Search (with icon), Select trigger
@@ -461,15 +468,14 @@ If two types are visually identical, merge them or differentiate them further.
 The goal is zero wasted variants — every variant in the component set should look
 different from every other variant.
 
-**Split by type** — one `use_figma` call per type to stay under 50K:
+**Try all types in ONE `use_figma` call.** Split by type only if it fails:
 
 ```javascript
 // TARGET: component library file (fileKey: xyz789)
-// Call 1: Primary button variants (all states × all sizes)
-// Call 2: Secondary button variants
-// Call 3: Ghost + Link variants
-// Call 4: Destructive variants + icon variants
-// Call 5: combineAsVariants into component set + add component properties
+// All button types: Primary, Secondary, Ghost, Link, Destructive
+// All states × all sizes for each type
+// combineAsVariants into component set + add component properties
+// If this exceeds 50K, split: types in separate calls, combine in final call
 ```
 
 After building, use `AskUserQuestion`:

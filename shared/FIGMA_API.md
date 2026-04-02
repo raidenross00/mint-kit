@@ -18,10 +18,45 @@ Every `use_figma` call can fail. If it fails:
 5. If partial success (some elements created, others failed): keep what worked,
    fix and retry only the failed parts
 
-### 50K Character Limit
-`use_figma` has a 50,000 character limit per call. Plan splits BEFORE writing code.
-Each skill defines its own partition boundaries (see skill-specific sections below).
-General rule: one logical unit per call. Never try to build everything in a single call.
+### 50K Character Limit — Try First, Split on Failure
+
+`use_figma` has a 50,000 character limit per call.
+
+**Default: try to fit everything into ONE call.** Do NOT pre-split into multiple
+calls "just in case." Most operations are nowhere near 50K. Splitting wastes API
+calls and slows the skill down.
+
+**Split strategy:**
+1. Write the code for everything you need in one call
+2. If the call fails with a size error, split into two logical halves and retry
+3. If a half still fails, split further
+4. If you can clearly see the code will exceed 50K (e.g., 200+ variable
+   definitions with verbose setup), split proactively into logical groups
+
+**Never announce splitting.** Don't say "I'll split this across multiple calls."
+Just do it if needed. The user doesn't care about your API call strategy.
+
+### Collections with Multiple Modes
+
+To create a collection with modes (e.g., Light/Dark or Desktop/Mobile):
+
+```javascript
+// The default mode is created automatically — rename it, then add the second
+const collection = figma.variables.createVariableCollection("Map");
+collection.modes[0].name = "Light";
+const darkModeId = collection.addMode("Dark");
+const lightModeId = collection.modes[0].modeId;
+
+// Set values for BOTH modes on each variable
+const textHeading = figma.variables.createVariable("text/heading", collection.id, "COLOR");
+textHeading.setValueForMode(lightModeId, figma.variables.createVariableAlias(aliasTextPrimary));
+textHeading.setValueForMode(darkModeId, { r: 0.95, g: 0.95, b: 0.95, a: 1 });
+```
+
+To apply a mode to a frame (e.g., for the Design System Overview dark preview):
+```javascript
+frame.setExplicitVariableModeForCollection(collection.id, darkModeId);
+```
 
 ### Node IDs and Cross-Call References
 When creating variables or frames, ALWAYS return IDs at the end of the `use_figma` code:
@@ -84,6 +119,25 @@ spirals.
    user to check Figma directly.
 4. **NEVER rebuild frames because a verification or screenshot call returned
    empty/error.** The frames exist. The API is lagging.
+
+### Cross-Skill Placeholder Convention
+
+When a skill creates placeholder sections for another skill to fill later, use
+this naming convention so the consuming skill can reliably find and replace them:
+
+**Frame name format:** `[PLACEHOLDER] {Section Name}`
+
+Examples:
+- `[PLACEHOLDER] Interactive States` — created by mint-system, filled by mint-lib
+- `[PLACEHOLDER] Component Patterns` — created by mint-system, filled by mint-lib
+- `[PLACEHOLDER] Borders + Dividers` — created by mint-system, filled by mint-lib
+
+**Visual style:** dashed border (strokeDashes: [8, 4]), neutral-300 stroke color,
+gray text label: "Run /{skill-name} to fill this section."
+
+**Discovery:** the consuming skill searches for frames with `[PLACEHOLDER]` prefix
+using `figma.currentPage.findAll(n => n.name.startsWith("[PLACEHOLDER]"))`.
+When filling, rename the frame to remove the prefix (e.g., "Interactive States").
 
 ### Token Strategy — What Goes Where
 
