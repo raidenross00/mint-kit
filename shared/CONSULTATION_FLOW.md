@@ -82,6 +82,12 @@ accumulates reasoning as it builds.
 - Write 3: `1fr 1fr 1fr` (max-width: 1200px)
 - Write 4: `repeat(4, 1fr)` (full width)
 
+**Specimens are served over HTTP** (not file://). A Python HTTP server starts
+at the beginning of Phase 3 and serves from `~/Downloads/mint-kit/`. This
+ensures auto-refresh works on both Linux and macOS (macOS browsers block
+`fetch()` on file:// URLs). See mint-system SKILL.md "Specimen server" for
+the setup. The server is killed during cleanup.
+
 **Summary bar** after the grid (full-width): compares all options, states
 the recommendation, ends with "Head back to terminal to make your pick."
 

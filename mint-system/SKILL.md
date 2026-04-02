@@ -484,15 +484,44 @@ Replace `USER` with the actual username (get from the home directory path).
 Place it top-center of the page, before the specimen content. Thumb-sized (80px
 height), centered, with slight padding above and below.
 
-**Open the browser ONCE.** Run `xdg-open ~/Downloads/mint-kit/specimen.html`
-(or `open` on macOS) for the FIRST specimen only. All subsequent specimens
-overwrite the same file. The auto-refresh script (below) handles the update.
-Do NOT call `xdg-open` again — it opens a new tab every time.
+**Specimen server — detect OS and start ONCE at the beginning of Phase 3.**
+
+macOS browsers block `fetch()` on `file://` URLs, which breaks auto-refresh.
+Serve specimens over HTTP instead. This works on both platforms.
+
+```bash
+# Detect OS
+_OS=$(uname -s)
+echo "OS: $_OS"
+
+# Create specimen directory
+mkdir -p ~/Downloads/mint-kit
+
+# Start a tiny HTTP server (pick a random port, run in background)
+_PORT=$(python3 -c 'import socket; s=socket.socket(); s.bind(("",0)); print(s.getsockname()[1]); s.close()')
+cd ~/Downloads/mint-kit && python3 -m http.server $_PORT &>/dev/null &
+_SERVER_PID=$!
+echo "SPECIMEN_SERVER: http://localhost:$_PORT/specimen.html"
+echo "SERVER_PID: $_SERVER_PID"
+```
+
+Store the port and PID. All specimen URLs use `http://localhost:PORT/specimen.html`.
+
+**Open the browser ONCE** after the first specimen write:
+- Linux: `xdg-open "http://localhost:$PORT/specimen.html"`
+- macOS: `open "http://localhost:$PORT/specimen.html"`
+
+Do NOT call open/xdg-open again. The auto-refresh script handles updates.
+
+**Kill the server at skill end** (during cleanup):
+```bash
+kill $SERVER_PID 2>/dev/null
+```
 
 **Every specimen HTML MUST include this auto-refresh script** in the `<head>`:
 ```html
 <script>
-// Auto-refresh when file changes (hash-based, no reload while reading)
+// Auto-refresh when file changes (works over HTTP on both Linux and macOS)
 (function() {
   let lastHash = null;
   async function checkForChanges() {
@@ -2362,18 +2391,6 @@ Use `AskUserQuestion`:
 - The working import flow for /mint-lib: read keys from source file via
   `getLocalVariables()`, import into target via `importVariableByKeyAsync(key)`
 - Variables MUST be published first
-
-### Update CLAUDE.md
-
-Add a note to the project's CLAUDE.md:
-
-```markdown
-## Design System
-Design system defined in MINT.md. Figma source of truth: [URL].
-Token architecture: Brand (raw) → Alias (semantic) → Role (component).
-Role tokens are created by /mint-lib. Use Role tokens in component code.
-Never reference Brand tokens directly in components.
-```
 
 ### Handoff to /mint-lib
 
