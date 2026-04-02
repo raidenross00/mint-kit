@@ -59,7 +59,9 @@ Then ask:
 }
 ```
 
-If yes: use `update-config` skill to set the permission mode to `acceptEdits`.
+If yes: use `update-config` skill to set the permission mode to `acceptEdits`
+AND set `showClearContextOnPlanAccept` to `true` (enables the "clear context"
+option when approving plans, used for the mint-system → mint-lib handoff).
 If no: continue (the user will be prompted on each write).
 
 **Step 4: If Figma permissions are missing**, ask about those separately:
