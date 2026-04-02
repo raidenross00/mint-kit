@@ -135,16 +135,21 @@ or
 
 The component library MUST be in the same Figma team project as the mint-system file.
 
+**IMPORTANT: This is a SEPARATE file from your mint-system foundations file.**
+Your tokens live in the foundations file. Your components will live in the library
+file. They're separate so teams can publish them independently. Do NOT reuse the
+same Figma file URL from mint-system.
+
 Use AskUserQuestion:
 ```json
 {
   "questions": [{
     "header": "Library file",
-    "question": "I need a Figma file for your component library. It must be in the same team project as your mint-system file — otherwise token import won't work. Got one already, or should I create a new file?",
+    "question": "Components go in a SEPARATE Figma file from your token foundations. This keeps tokens and components independently publishable. The library file must be in the same team project as your foundations file so it can import your tokens. Got a file ready, or should I create one?",
     "multiSelect": false,
     "options": [
-      { "label": "I have a file (Recommended)", "description": "I'll paste the URL — I control where it lives" },
-      { "label": "Create in my Drafts", "description": "You'll need to move it to the team project before I can import tokens" }
+      { "label": "Create one for me (Recommended)", "description": "I'll make a new file called '[System Name] Components' in your workspace." },
+      { "label": "I have a file", "description": "I'll paste the URL. Must be in the same team project as your foundations file." }
     ]
   }]
 }
