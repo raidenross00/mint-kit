@@ -90,7 +90,11 @@ Resume from where things left off.
 
 ### 0a: Permissions
 
-This is mint-lib. It makes 100-145 Figma calls building components across 4 tiers.
+This is mint-lib. It makes Figma calls to build components across 4 tiers.
+The 50K character limit per `use_figma` call fits ~30 components per call.
+Do NOT batch conservatively (2-3 per call). Pack as many as will fit. A full
+tier of 27 atoms should be 1-2 calls, not 14. DNA exploration uses HTML
+specimens, not Figma. Figma calls are only for final component creation.
 Read and follow `~/.claude/skills/mint-kit/shared/MINT_PERMISSIONS.md`. Use "Mint Lib" as the skill name.
 If yes: use `update-config` skill to add both. If no: continue.
 
@@ -803,7 +807,8 @@ Use `AskUserQuestion`:
 
 ## Phase 3: Auto-Generate Tier 1 — Atoms
 
-Create a "Tier 1 — Atoms" page. Build in batches (2-3 per `use_figma` call).
+Create a "Tier 1 — Atoms" page. Pack as many components as will fit per
+`use_figma` call (aim for the full tier in 1-2 calls, not 2-3 components each).
 Apply DNA patterns — do NOT invent new patterns. If a component needs something
 patterns don't cover, flag it via `AskUserQuestion`.
 

@@ -2375,3 +2375,36 @@ Role tokens are created by /mint-lib. Use Role tokens in component code.
 Never reference Brand tokens directly in components.
 ```
 
+### Handoff to /mint-lib
+
+After CLAUDE.md is updated, hand off to /mint-lib using plan mode. This gives
+the user the native Claude Code "clear context + auto approve edits" prompt,
+which is the cleanest way to start a fresh session for the component library.
+
+**Step 1:** Tell the user the design system is complete:
+
+> "Your design system is ready. Tokens are in Figma, MINT.md is written.
+> The next step is /mint-lib to build the component library. I'm going to
+> hand off now so you can start fresh with a clean context."
+
+**Step 2:** Enter plan mode with `EnterPlanMode`.
+
+**Step 3:** Write the plan file with this content:
+
+```markdown
+# Handoff: mint-system complete → mint-lib
+
+Design system is done. MINT.md is written. Figma tokens are published.
+
+## Next step
+
+Run `/mint-lib` to build the component library from your locked design system.
+MINT.md has everything mint-lib needs — fonts, colors, spacing, vibe lock.
+```
+
+**Step 4:** Exit plan mode with `ExitPlanMode`.
+
+The user sees Claude Code's native prompt: approve + clear context + auto approve
+edits. They clear context, type `/mint-lib`, and start building components with
+a fresh context window.
+
