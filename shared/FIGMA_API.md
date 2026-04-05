@@ -9,14 +9,97 @@ Always wrap in try/catch. If a font fails:
    install [X] and I'll retry, or we can pick a different font."
 3. Offer alternatives from the same aesthetic category
 
-### Error Handling
-Every `use_figma` call can fail. If it fails:
-1. Read the error message carefully
-2. If font error: retry with Inter as fallback
-3. If code error: fix the JS and retry once
-4. If it fails twice: tell the user what went wrong and ask how to proceed
-5. If partial success (some elements created, others failed): keep what worked,
-   fix and retry only the failed parts
+### Error Handling — Structured Recovery Chain
+
+Every `use_figma` call can fail. Follow this chain IN ORDER — do not skip steps.
+
+#### Step 1: Attempt the call
+Run the `use_figma` call. If it succeeds, continue. If it fails, read the error
+message and classify it:
+
+#### Step 2: Classify and recover
+
+**Size error** (50K character limit exceeded):
+1. Split into two logical halves (see "50K Character Limit" section below)
+2. Retry each half independently
+3. If a half still fails, split further (max 3 levels deep)
+4. If 3 levels deep and still failing: checkpoint to disk, tell user
+
+**Font error** (font not available):
+1. Fall back to Inter for that specific font
+2. Record the fallback in the session checkpoint: `decisions.fonts.{role}.fallback = "Inter"`
+3. Tell the user: "Font [X] failed to load — using Inter as fallback. You can
+   install [X] and I'll retry, or we can pick a different font."
+4. Continue — do NOT block on a font failure
+
+**Auth / permission error** (team project access):
+1. Check: is the file in a team project? (Files in Drafts can't publish variables)
+2. Check: does the user have Editor access? (Viewer can't create variables)
+3. Guide: "This file needs to be in a team project with Editor access. Move it
+   from Drafts to a team project, or ask the file owner for Editor access."
+4. Use `AskUserQuestion` to gate: "Let me know when access is fixed."
+
+**Code error** (JS syntax, wrong API, type mismatch):
+1. Read the error message — it usually says exactly what's wrong
+2. Fix the JS and retry once
+3. If it fails again with a DIFFERENT error: fix and retry once more
+4. If it fails again with the SAME error: checkpoint, escalate (see Step 4)
+
+**Partial success** (some elements created, others failed):
+1. Run inventory call (see below)
+2. Diff against intent — identify what's missing
+3. Retry ONLY the missing elements
+4. If the retry fails: checkpoint, escalate
+
+#### Step 3: Inventory after failure
+
+After ANY failed `use_figma` call that might have partially succeeded, run a
+read-only inventory call to see what actually got created:
+
+```javascript
+// INVENTORY — read-only, no mutations
+const collections = figma.variables.getLocalVariableCollections();
+const variables = figma.variables.getLocalVariables();
+const textStyles = figma.getLocalTextStyles();
+const effectStyles = figma.getLocalEffectStyles();
+
+return {
+  collections: collections.map(c => ({ name: c.name, id: c.id, count: c.variableIds.length })),
+  variableNames: variables.map(v => v.name),
+  textStyleNames: textStyles.map(s => s.name),
+  effectStyleNames: effectStyles.map(s => s.name)
+};
+```
+
+Compare the inventory against what you intended to create. The delta is your
+retry list. Do NOT recreate things that already exist.
+
+#### Step 4: Escalation (3 consecutive failures)
+
+If the same logical operation fails 3 times:
+1. **Checkpoint immediately** — write current state to the session file (see MINT_CHECKPOINT.md)
+2. **Report structured failure to user:**
+   ```
+   "3 of 11 primary scale variables were created before the error.
+   I've checkpointed progress. The error: [exact message].
+   Options: A) I'll retry the remaining 8. B) Check Figma and tell me what you see.
+   C) Skip this step and continue."
+   ```
+3. **Wait for user direction** — do NOT silently retry in a loop
+4. Use `AskUserQuestion` with those 3 options so the user can respond cleanly
+
+**What the skill says on failure (exact words):**
+- NOT: "Something went wrong. Let me try again."
+- YES: "3 of 11 primary scale variables were created before the error. I'll
+  inventory what exists and retry only the missing 8."
+
+#### Recovery references in skills
+
+Skills reference this section with a one-liner:
+```
+**On failure:** Follow recovery chain in FIGMA_API.md § Error Handling.
+```
+The one-liner replaces inline error handling. The full protocol lives here.
 
 ### 50K Character Limit — Try First, Split on Failure
 

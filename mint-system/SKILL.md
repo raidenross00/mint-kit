@@ -86,22 +86,45 @@ Read `~/.claude/skills/mint-kit/shared/CONSULTATION_FLOW.md` for the full patter
 
 ---
 
-## Context Window Management
+## Session Checkpointing + Crash Recovery
 
-This skill can be long-running. Protect the context window:
+Read and follow `~/.claude/skills/mint-kit/shared/MINT_CHECKPOINT.md`.
 
-**Between phases:** After each major phase completes, write a checkpoint summary
-to yourself (not to the user) noting: which phase completed, key decisions made,
-all variable/frame IDs created, any issues encountered. Keep this under 200 words.
+This skill persists state to `~/.cache/mint-kit/{project-slug}/mint-system-session.json`
+after every major decision. If the skill crashes, the user can resume without re-making
+locked decisions.
 
-**If context is getting long:** Before Phase 4 (token creation), summarize all
-Phase 1-3 decisions into a compact reference block. Drop the conversational
-back-and-forth — keep only: approved fonts, approved colors, approved spacing,
-approved aesthetic direction, and the Figma fileKey.
+**Context hygiene:** Before Phase 4, all locked decisions are in the session file.
+Summarize Phase 1-3 into a compact reference block (< 300 words) and stop re-reading
+old specimen HTML or research results. See MINT_CHECKPOINT.md § Context Hygiene.
 
-**Checkpoint/resume:** If the user says "continue" or "pick up where we left off",
-check MINT.md for partial progress. If Phase 3 decisions are recorded but
-tokens aren't created, resume at Phase 4.
+---
+
+## Resume Router
+
+**This runs BEFORE Phase 0.** On skill start:
+
+1. Derive project-slug from CWD directory name
+2. Check for `~/.cache/mint-kit/{slug}/mint-system-session.json`
+3. If no file, or file is > 24h old → skip to Phase 0 (fresh start)
+4. If file exists and < 24h old → read it, parse JSON
+5. If JSON parse fails → warn "Session file corrupted, starting fresh", delete file, skip to Phase 0
+6. Offer resume via `AskUserQuestion`:
+   ```json
+   {
+     "questions": [{
+       "header": "Resume",
+       "question": "Found a session from [time ago]. You were at [currentPhase description]. Locked: [list locked items from decisions]. Resume or start fresh?",
+       "multiSelect": false,
+       "options": [
+         { "label": "Resume (Recommended)", "description": "Pick up at [phase]. All locked decisions preserved." },
+         { "label": "Start fresh", "description": "Ignore the saved session. Every decision from scratch." }
+       ]
+     }]
+   }
+   ```
+7. **On resume:** Load decisions + figmaState from session. Skip all `completedPhases`. Jump to `currentPhase`. Tell user: "Resuming at [phase]. Locked: [summary]."
+8. **On fresh:** Delete session file, proceed to Phase 0.
 
 ---
 
@@ -113,6 +136,8 @@ If yes: use `update-config` skill to add the missing permissions. If no: continu
 
 **After permissions are handled (whether added or skipped), proceed IMMEDIATELY to
 Phase 1.** Permissions are a gate, not a task. Do NOT stop here.
+
+**Checkpoint:** Update session — `completedPhases: ["0"]`, phase `0` complete.
 
 ---
 
@@ -259,6 +284,8 @@ deliberate whitespace. Amalfi, not Bondi."
 - If user picked "Research my competitors" → run Phase 2 before proposals
 - If user picked a vibe direction → use that to inform Phase 3 proposals
 
+**Checkpoint:** Update session — `decisions.product` set, `figmaFileKey` stored, phase `1` complete.
+
 ## Phase 2: Research (if selected — strongly recommended)
 
 Research is what makes proposals feel grounded instead of generic. Without it,
@@ -386,6 +413,8 @@ Present to the user as context:
 
 This research directly informs Phase 3 — every proposal should reference real
 brands in the user's space, not abstract font categories or tech design systems.
+
+**Checkpoint:** Update session — phase `2` complete.
 
 ---
 
@@ -686,6 +715,8 @@ changes multiple things, present the updated lock and ask ONE more focused quest
 about whatever is still ambiguous. Max 2 rounds of AskUserQuestion for vibe lock.
 
 **If the user picks "Lock it" on all tabs:** Done. Move to 3b immediately.
+
+**Checkpoint:** Update session — `decisions.vibeLock` locked, phase `3a` complete.
 
 **The vibe lock becomes the acceptance criteria for all downstream steps:**
 - Color specimens (3b): "Does this palette feel [temperature] and [emotion]?"
@@ -1082,6 +1113,8 @@ COLOR LOCKED:
   Accent: [hero hex] — [relationship to primary] (or "skipped")
 ```
 
+**Checkpoint:** Update session — all color decisions locked (`decisions.colors.*`), phases `3b-i` through `3b-iv` complete.
+
 Move to 3c.
 
 ### 3c: Type Specimens (layered funnel — display → body → data)
@@ -1356,6 +1389,8 @@ TYPE LOCKED:
   Data:    [font] — [why it works]
 ```
 
+**Checkpoint:** Update session — all font decisions locked (`decisions.fonts.*`), phases `3c-i` through `3c-iii` complete.
+
 Move to 3d.
 
 ### 3d: Text Colors (the readability layer — needs locked type + color)
@@ -1407,6 +1442,8 @@ Confirm the text color choice in plain text:
 TEXT COLORS LOCKED:
   Approach: [style] — [why this contrast/tint works with the locked type + color]
 ```
+
+**Checkpoint:** Update session — `decisions.textColors` locked, phase `3d` complete.
 
 Move to Coherence Validation.
 
@@ -1481,6 +1518,8 @@ on that section rather than re-proposing everything:
 Each drill-down is one focused conversation + Figma specimen. After the user decides,
 re-run coherence validation.
 
+**Checkpoint:** Update session — `decisions.spacing` locked, phase `3e` complete. All Phase 3 decisions are now locked.
+
 ### 3e: Motion — SKIP
 
 Do NOT propose motion values. LLMs always default to the same generic spec
@@ -1501,6 +1540,15 @@ they can be tested in a real browser, not speculated about in a design tool._
 
 After ALL dimensions are approved, create the full token system.
 Try to fit into as few `use_figma` calls as possible. Split only if a call fails.
+
+**On failure:** Follow recovery chain in FIGMA_API.md § Error Handling. After each
+successful `use_figma` call, checkpoint the created IDs/keys to the session file
+(`figmaState.collections`, `figmaState.variableKeys`, etc.) so a crash doesn't
+lose partial progress.
+
+**Checkpoint after each token creation step:** Update session — `figmaState` with
+new collection IDs, variable keys, style IDs. Update `currentPhase` to the
+current step number (e.g., `"4-step3"`).
 
 **IMPORTANT — what gets created here (4 collections + styles):**
 - **Brand** variables (color, spacing, opacity, type scale, font family, font weight) — raw primitives
@@ -2365,6 +2413,8 @@ _Deferred to implementation. Decide timing and easing when you can test in a rea
 _Component-level tokens (Role/*, radius, border-weight, component padding) are
 created by /mint-lib during the DNA phase and appended below._
 ```
+
+**Checkpoint:** Archive session — rename `mint-system-session.json` → `mint-system-session.done`. Phase 5 complete, skill finished.
 
 ### Publish as Team Library
 

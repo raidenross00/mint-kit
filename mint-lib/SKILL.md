@@ -68,21 +68,45 @@ If you DO need to split auto-generation tiers:
 
 ---
 
-## Context Window Management
+## Session Checkpointing + Crash Recovery
 
-This skill is the longest in the Mint Kit series. Protect the context window:
+Read and follow `~/.claude/skills/mint-kit/shared/MINT_CHECKPOINT.md`.
 
-**Between DNA components:** After each DNA component is approved and patterns locked,
-write a checkpoint summary noting: component name, approved direction, all variable/frame
-IDs, extracted patterns, any issues. Keep under 200 words.
+This skill persists state to `~/.cache/mint-kit/{project-slug}/mint-lib-session.json`
+after every DNA component approval, pattern lock, and tier completion. If the skill
+crashes, the user can resume without re-making decisions.
 
-**Before auto-generation:** Summarize all DNA decisions + patterns into a compact
-reference block. Drop the conversational back-and-forth. Keep only: pattern rules,
-token mappings, component IDs, and the Figma fileKeys.
+**Context hygiene:** Before auto-generation (Phase 3+), all DNA decisions are in the
+session file. Summarize DNA into a compact reference block (< 300 words) and stop
+re-reading old specimen HTML or exploration history. See MINT_CHECKPOINT.md § Context Hygiene.
 
-**Checkpoint/resume:** If the user says "continue" or "pick up where we left off",
-check MINT.md for component patterns and the Figma file for existing components.
-Resume from where things left off.
+---
+
+## Resume Router
+
+**This runs BEFORE Phase 0.** On skill start:
+
+1. Derive project-slug from CWD directory name
+2. Check for `~/.cache/mint-kit/{slug}/mint-lib-session.json`
+3. If no file, or file is > 24h old → skip to Phase 0 (fresh start)
+4. If file exists and < 24h old → read it, parse JSON
+5. If JSON parse fails → warn "Session file corrupted, starting fresh", delete file, skip to Phase 0
+6. Offer resume via `AskUserQuestion`:
+   ```json
+   {
+     "questions": [{
+       "header": "Resume",
+       "question": "Found a session from [time ago]. You were at [currentPhase description]. DNA status: [Button: done/pending, Input: done/pending, Card: done/pending]. Resume or start fresh?",
+       "multiSelect": false,
+       "options": [
+         { "label": "Resume (Recommended)", "description": "Pick up at [phase]. All completed DNA and tiers preserved." },
+         { "label": "Start fresh", "description": "Ignore the saved session. Start from setup." }
+       ]
+     }]
+   }
+   ```
+7. **On resume:** Load decisions + figmaState from session. Skip all `completedPhases`. Jump to `currentPhase`. Tell user: "Resuming at [phase]. Completed: [summary]."
+8. **On fresh:** Delete session file, proceed to Phase 0.
 
 ---
 
@@ -175,22 +199,43 @@ Use AskUserQuestion:
 
 ### 0d: Import Tokens from mint-system
 
-**Step 1: Read all keys from the mint-system file (source fileKey):**
+**Step 1: Read keys from the mint-system file BY COLLECTION (source fileKey).**
+
+A mint-system file has 100+ variables across Brand, Alias, and Map collections.
+`getLocalVariables()` dumps everything and gets TRUNCATED in the MCP response.
+Instead: read collections first (tiny response), then read variables per collection.
+
+**Call 1 — Get collections + styles (small response):**
 ```javascript
 // TARGET: mint-system file (fileKey: abc123)
-const variables = figma.variables.getLocalVariables();
+const collections = figma.variables.getLocalVariableCollections();
 const textStyles = figma.getLocalTextStyles();
 const effectStyles = figma.getLocalEffectStyles();
 
 return {
-  variables: variables.map(v => {
-    const col = figma.variables.getVariableCollectionById(v.variableCollectionId);
-    return { name: v.name, key: v.key, id: v.id, collection: col.name, type: v.resolvedType };
-  }),
+  collections: collections.map(c => ({
+    name: c.name, id: c.id, variableCount: c.variableIds.length
+  })),
   textStyles: textStyles.map(s => ({ name: s.name, key: s.key, id: s.id })),
   effectStyles: effectStyles.map(s => ({ name: s.name, key: s.key, id: s.id }))
 };
 ```
+
+**Call 2+ — Get variables per collection (one call per collection):**
+```javascript
+// TARGET: mint-system file (fileKey: abc123)
+// Repeat this call for EACH collection ID from Call 1
+const collection = figma.variables.getVariableCollectionById("COLLECTION_ID_HERE");
+const vars = collection.variableIds.map(id => {
+  const v = figma.variables.getVariableById(id);
+  return { name: v.name, key: v.key, id: v.id, type: v.resolvedType };
+});
+return { collection: collection.name, variables: vars };
+```
+
+This splits a 100+ variable dump into 2-3 focused reads (~30-50 variables each).
+If a collection is still too large, the response includes enough data to retry
+with a subset of variableIds.
 
 **Step 2: Import into the component library file (target fileKey):**
 ```javascript
@@ -743,6 +788,8 @@ Extract the implicit patterns this component established. Use `AskUserQuestion`:
 
 **Wait for explicit confirmation.**
 
+**Checkpoint:** Update session — `decisions.dna.{component}` locked with direction, patterns, IDs. Update `figmaState` with new variable keys and component IDs.
+
 ### Between DNA Components
 
 After locking patterns, transition:
@@ -757,6 +804,8 @@ After locking patterns, transition:
 > C) Take a break — I'll save progress
 
 ---
+
+**Checkpoint:** Update session — all 3 DNA components complete, phase `1` done.
 
 ## Phase 2: Pattern Lock
 
@@ -810,12 +859,18 @@ Use `AskUserQuestion`:
 
 ---
 
+**Checkpoint:** Update session — phase `2` complete, patterns written to MINT.md.
+
 ## Phase 3: Auto-Generate Tier 1 — Atoms
 
 Create a "Tier 1 — Atoms" page. Pack as many components as will fit per
 `use_figma` call (aim for the full tier in 1-2 calls, not 2-3 components each).
 Apply DNA patterns — do NOT invent new patterns. If a component needs something
 patterns don't cover, flag it via `AskUserQuestion`.
+
+**On failure:** Follow recovery chain in FIGMA_API.md § Error Handling. Checkpoint
+`figmaState` after each successful `use_figma` call so a crash doesn't lose
+partial tier progress.
 
 **Error recovery:** If a `use_figma` call fails mid-tier:
 1. Verify what was created (follow-up verification call)
@@ -880,9 +935,13 @@ After building, use `AskUserQuestion`:
 
 ---
 
+**Checkpoint:** Update session — phase `3` complete (Tier 1 atoms), `figmaState` updated.
+
 ## Phase 4: Auto-Generate Tier 2 — Molecules
 
 Composed from DNA + Tier 1. Create "Tier 2 — Molecules" page.
+
+**On failure:** Follow recovery chain in FIGMA_API.md § Error Handling.
 
 ### Tier 2 Component List (37 components)
 
@@ -951,10 +1010,14 @@ After building, use `AskUserQuestion`:
 
 ---
 
+**Checkpoint:** Update session — phase `4` complete (Tier 2 molecules), `figmaState` updated.
+
 ## Phase 5: Auto-Generate Tier 3 — Organisms
 
 Assembled from everything. Create "Tier 3 — Organisms" page.
 Build ONE PAGE AT A TIME — verify each page of components before continuing.
+
+**On failure:** Follow recovery chain in FIGMA_API.md § Error Handling.
 
 ### Tier 3 Component List (33 components)
 
@@ -1025,6 +1088,8 @@ After building, use `AskUserQuestion`:
 
 ---
 
+**Checkpoint:** Update session — phase `5` complete (Tier 3 organisms), `figmaState` updated.
+
 ## Phase 6: Auto-Generate Tier 4 — Templates
 
 Full page compositions. Create "Tier 4 — Templates" page.
@@ -1079,6 +1144,8 @@ After building:
 
 ---
 
+**Checkpoint:** Update session — phase `6` complete (Tier 4 templates), `figmaState` updated.
+
 ## Phase 7: Polish + Publish
 
 ### 7a: Naming Cleanup
@@ -1132,6 +1199,8 @@ Use `AskUserQuestion`:
 > A) I'll publish now — update MINT.md when done
 > B) Review more first
 > C) I'll publish later
+
+**Checkpoint:** Archive session — rename `mint-lib-session.json` → `mint-lib-session.done`. Skill complete.
 
 ### 7f: Update MINT.md
 
