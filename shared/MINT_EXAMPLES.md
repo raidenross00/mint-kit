@@ -19,6 +19,9 @@ This file defines FORMATS (how things look). The protocol docs own the LOGIC
 
 Protocol docs are authoritative. This file mirrors them for quick reference.
 
+**Before editing ANY Mint Kit file:** Read `MINT_UPDATE_PROTOCOL.md` for the full
+dependency map and per-file checklist. Every change must propagate to downstream files.
+
 ## AskUserQuestion Structure
 
 Every AskUserQuestion call follows this 4-part structure:
