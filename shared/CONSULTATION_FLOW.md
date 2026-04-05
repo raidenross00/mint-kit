@@ -109,6 +109,14 @@ already understands the pattern and wants to compare quickly.
 - Research must appear in narration — unused research was wasted
 - Under 60 words per column. Columns are narrow in 4-up.
 
+## Consistency Anchors
+
+The exact formats for progressive grid widths, terminal voice during silent
+builds, and specimen file naming are defined in `MINT_EXAMPLES.md`. This file
+describes WHEN and WHY to use consultation flow. MINT_EXAMPLES.md defines the
+exact HOW (grid CSS values, file paths, voice rules). If they conflict, update
+MINT_EXAMPLES.md to match this file — this file owns the consultation flow spec.
+
 ## Why this exists
 
 Claude Code shows diffs/content for every Write and Edit tool call. During

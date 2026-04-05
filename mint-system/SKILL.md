@@ -69,6 +69,12 @@ Exploration specimens (Phase 3b color, 3c type) use HTML preview pages — no Fi
 
 Read and follow all rules in `~/.claude/skills/mint-kit/shared/ASKUSER_API.md`.
 
+## Consistency Anchors
+
+Read `~/.claude/skills/mint-kit/shared/MINT_EXAMPLES.md` for exact formats that
+MUST be identical across all Mint Kit skills (AskUserQuestion structure, checkpoint
+format, specimen naming, terminal voice, Pick+Lock pattern, Figma variable structure).
+
 ## Consultation Flow — When To Use It
 
 Read `~/.claude/skills/mint-kit/shared/CONSULTATION_FLOW.md` for the full pattern.
@@ -2233,6 +2239,19 @@ Tell the user: "Check the Design System Overview page. Select any element — yo
 should see variable references in the properties panel."
 
 **Do NOT proceed to Phase 5 until the overview is built and verified.**
+
+### Independent Token Verification
+
+After the overview page is verified, run independent verification of the FULL
+token system before writing MINT.md.
+
+**Verify:** Dispatch verification agent per `~/.claude/skills/mint-kit/shared/MINT_VERIFICATION.md`.
+Compare all locked decisions from the session file against actual Figma state.
+Use the mint-system verification checklist. Gate on PASS before proceeding to Phase 5.
+
+This is a SEPARATE verification from the overview page check above. The overview
+checks the page layout. This verification checks that ALL tokens, styles, and
+collections match the intended state from Phase 3 decisions.
 
 ---
 

@@ -101,6 +101,10 @@ Skills reference this section with a one-liner:
 ```
 The one-liner replaces inline error handling. The full protocol lives here.
 
+See `MINT_EXAMPLES.md § Recovery One-Liner Format` for the exact format of
+recovery references in skill files. The "exact words" examples above are
+the AUTHORITATIVE source — if MINT_EXAMPLES.md ever conflicts, this file wins.
+
 ### 50K Character Limit — Try First, Split on Failure
 
 `use_figma` has a 50,000 character limit per call.

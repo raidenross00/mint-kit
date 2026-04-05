@@ -52,6 +52,12 @@ Read and follow all rules in `~/.claude/skills/mint-kit/shared/ASKUSER_API.md`.
 
 ---
 
+## Consistency Anchors
+
+Read `~/.claude/skills/mint-kit/shared/MINT_EXAMPLES.md` for exact formats that
+MUST be identical across all Mint Kit skills (AskUserQuestion structure, checkpoint
+format, specimen naming, terminal voice, Pick+Lock pattern, verification dispatch).
+
 ## Figma Plugin API Reference
 
 Read and follow all rules in `~/.claude/skills/mint-kit/shared/FIGMA_API.md`.
@@ -713,6 +719,11 @@ Run verification:
 and text style MUST be token-bound.
 
 Report: "Token binding complete. [N] bound, [N] styled. Zero hardcoded."
+
+**Verify:** After token binding, dispatch verification agent per
+`~/.claude/skills/mint-kit/shared/MINT_VERIFICATION.md` using the mint-lib DNA
+reconciliation checklist. Confirm new Role/Brand/Alias variables exist and values
+match DNA exploration decisions. Gate on PASS before user approval.
 
 ### Step 8: User Final Approval
 
