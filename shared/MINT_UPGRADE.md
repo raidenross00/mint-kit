@@ -10,7 +10,7 @@ Triggered when `bin/mint-update-check` outputs `UPGRADE_AVAILABLE <old> <new>`.
 ### Step 1: Check auto_upgrade config
 
 ```bash
-_AUTO=$(grep -E '^auto_upgrade:' ~/.mint-kit/config.yaml 2>/dev/null | awk '{print $2}' | tr -d '[:space:]' || true)
+_AUTO=$(grep -E '^auto_upgrade:' ~/mint-kit/config.yaml 2>/dev/null | awk '{print $2}' | tr -d '[:space:]' || true)
 ```
 
 If `_AUTO` is `true`, skip to Step 3 (upgrade immediately).
@@ -30,7 +30,7 @@ recommend, options). Recommended option MUST be position 1.
       { "label": "A: Upgrade now (Recommended)", "description": "Pull latest, run migrations, continue with your skill." },
       { "label": "B: Always auto-upgrade", "description": "Upgrade now and skip this prompt in future." },
       { "label": "C: Not now", "description": "Snooze this version. I'll ask again later (24h → 48h → 7d)." },
-      { "label": "D: Never ask", "description": "Disable update checks entirely. Re-enable in ~/.mint-kit/config.yaml." }
+      { "label": "D: Never ask", "description": "Disable update checks entirely. Re-enable in ~/mint-kit/config.yaml." }
     ]
   }]
 }
@@ -40,15 +40,15 @@ recommend, options). Recommended option MUST be position 1.
 
 **If B (Always auto-upgrade):**
 ```bash
-mkdir -p ~/.mint-kit
-if [ -f ~/.mint-kit/config.yaml ]; then
-  if grep -q '^auto_upgrade:' ~/.mint-kit/config.yaml; then
-    sed -i 's/^auto_upgrade:.*/auto_upgrade: true/' ~/.mint-kit/config.yaml
+mkdir -p ~/mint-kit
+if [ -f ~/mint-kit/config.yaml ]; then
+  if grep -q '^auto_upgrade:' ~/mint-kit/config.yaml; then
+    sed -i 's/^auto_upgrade:.*/auto_upgrade: true/' ~/mint-kit/config.yaml
   else
-    echo "auto_upgrade: true" >> ~/.mint-kit/config.yaml
+    echo "auto_upgrade: true" >> ~/mint-kit/config.yaml
   fi
 else
-  echo "auto_upgrade: true" > ~/.mint-kit/config.yaml
+  echo "auto_upgrade: true" > ~/mint-kit/config.yaml
 fi
 ```
 Then continue to Step 3.
@@ -57,28 +57,28 @@ Then continue to Step 3.
 ```bash
 # Read current snooze level, increment (or start at 1)
 _LEVEL=1
-if [ -f ~/.mint-kit/update-snoozed ]; then
-  _OLD_VER=$(awk '{print $1}' ~/.mint-kit/update-snoozed)
-  _OLD_LEVEL=$(awk '{print $2}' ~/.mint-kit/update-snoozed)
+if [ -f ~/mint-kit/update-snoozed ]; then
+  _OLD_VER=$(awk '{print $1}' ~/mint-kit/update-snoozed)
+  _OLD_LEVEL=$(awk '{print $2}' ~/mint-kit/update-snoozed)
   if [ "$_OLD_VER" = "{new}" ]; then
     _LEVEL=$(( _OLD_LEVEL + 1 ))
   fi
 fi
-echo "{new} $_LEVEL $(date +%s)" > ~/.mint-kit/update-snoozed
+echo "{new} $_LEVEL $(date +%s)" > ~/mint-kit/update-snoozed
 ```
 Then continue with the original skill. Say nothing further about updates.
 
 **If D (Never ask):**
 ```bash
-mkdir -p ~/.mint-kit
-if [ -f ~/.mint-kit/config.yaml ]; then
-  if grep -q '^update_check:' ~/.mint-kit/config.yaml; then
-    sed -i 's/^update_check:.*/update_check: false/' ~/.mint-kit/config.yaml
+mkdir -p ~/mint-kit
+if [ -f ~/mint-kit/config.yaml ]; then
+  if grep -q '^update_check:' ~/mint-kit/config.yaml; then
+    sed -i 's/^update_check:.*/update_check: false/' ~/mint-kit/config.yaml
   else
-    echo "update_check: false" >> ~/.mint-kit/config.yaml
+    echo "update_check: false" >> ~/mint-kit/config.yaml
   fi
 else
-  echo "update_check: false" > ~/.mint-kit/config.yaml
+  echo "update_check: false" > ~/mint-kit/config.yaml
 fi
 ```
 Then continue with the original skill. Say nothing further about updates.
@@ -109,9 +109,9 @@ state changes (config format, file renames, checkpoint schema, etc.).
 ### Step 5: Write marker + clear cache
 
 ```bash
-echo "{old}" > ~/.mint-kit/just-upgraded-from
-rm -f ~/.mint-kit/last-update-check
-rm -f ~/.mint-kit/update-snoozed
+echo "{old}" > ~/mint-kit/just-upgraded-from
+rm -f ~/mint-kit/last-update-check
+rm -f ~/mint-kit/update-snoozed
 ```
 
 ### Step 6: Show What's New
@@ -147,7 +147,7 @@ previous session.
 
 ## §3 Config Management
 
-Config lives at `~/.mint-kit/config.yaml`. Plain YAML, no nesting.
+Config lives at `~/mint-kit/config.yaml`. Plain YAML, no nesting.
 
 ### Supported keys
 
@@ -159,7 +159,7 @@ Config lives at `~/.mint-kit/config.yaml`. Plain YAML, no nesting.
 ### Reading config (from bash)
 
 ```bash
-grep -E '^{key}:' ~/.mint-kit/config.yaml 2>/dev/null | awk '{print $2}' | tr -d '[:space:]' || true
+grep -E '^{key}:' ~/mint-kit/config.yaml 2>/dev/null | awk '{print $2}' | tr -d '[:space:]' || true
 ```
 
 Returns empty string if file missing or key not found. Callers treat empty as
@@ -168,15 +168,15 @@ the default value.
 ### Writing config (from bash)
 
 ```bash
-mkdir -p ~/.mint-kit
-if [ -f ~/.mint-kit/config.yaml ]; then
-  if grep -q '^{key}:' ~/.mint-kit/config.yaml; then
-    sed -i 's/^{key}:.*/{key}: {value}/' ~/.mint-kit/config.yaml
+mkdir -p ~/mint-kit
+if [ -f ~/mint-kit/config.yaml ]; then
+  if grep -q '^{key}:' ~/mint-kit/config.yaml; then
+    sed -i 's/^{key}:.*/{key}: {value}/' ~/mint-kit/config.yaml
   else
-    echo "{key}: {value}" >> ~/.mint-kit/config.yaml
+    echo "{key}: {value}" >> ~/mint-kit/config.yaml
   fi
 else
-  echo "{key}: {value}" > ~/.mint-kit/config.yaml
+  echo "{key}: {value}" > ~/mint-kit/config.yaml
 fi
 ```
 

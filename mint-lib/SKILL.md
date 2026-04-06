@@ -89,7 +89,7 @@ If you DO need to split auto-generation tiers:
 
 Read and follow `~/.claude/skills/mint-kit/shared/MINT_CHECKPOINT.md`.
 
-This skill persists state to `~/.mint-kit/projects/{project-slug}/mint-lib-session.json`
+This skill persists state to `~/mint-kit/projects/{project-slug}/mint-lib-session.json`
 after every DNA component approval, pattern lock, and tier completion. If the skill
 crashes, the user can resume without re-making decisions.
 
@@ -103,7 +103,7 @@ re-reading old specimen HTML or exploration history. See MINT_CHECKPOINT.md § C
 
 **This runs BEFORE Phase 0.** On skill start:
 
-1. Check for session files at `~/.mint-kit/projects/*/mint-lib-session.json`
+1. Check for session files at `~/mint-kit/projects/*/mint-lib-session.json`
 2. If a session matches context from the user's prompt, use that slug
 3. If no file, or file is > 24h old → skip to Phase 0 (fresh start)
 4. If file exists and < 24h old → read it, parse JSON
@@ -141,12 +141,12 @@ If yes: use `update-config` skill to add both. If no: continue.
 
 ### 0b: Find and Select MINT.md
 
-Search for MINT.md files in `~/.mint-kit/projects/`. List all subdirectories — each
+Search for MINT.md files in `~/mint-kit/projects/`. List all subdirectories — each
 one contains a MINT.md. Read the first line of each to get the product name.
 
 **If 0 found:** "No MINT.md found. Run /mint-system or /mint-extract first to create your design system."
 
-**If 1 found:** Use automatically. "Found MINT.md for [product] at ~/.mint-kit/projects/{slug}/MINT.md. Using this."
+**If 1 found:** Use automatically. "Found MINT.md for [product] at ~/mint-kit/projects/{slug}/MINT.md. Using this."
 
 **If 2+ found:** Read first ~20 lines of each for project name + aesthetic. Use
 `AskUserQuestion` to let user pick (options in question text, action-based selectable).
@@ -455,7 +455,7 @@ for Primary MD, then icon variants for Primary MD.
 
 #### HTML Specimen Generation — Component Directions
 
-Write to `~/.mint-kit/mint-specimen-{component}-directions.html`.
+Write to `~/mint-kit/mint-specimen-{component}-directions.html`.
 Open in browser: `xdg-open` (Linux) or `open` (macOS).
 On iteration: overwrite, re-open.
 
@@ -698,7 +698,7 @@ return { imported, failed };
 
 **If import fails:** The user likely didn't republish. Ask again.
 
-**Step 6d: Update MINT.md** at `~/.mint-kit/projects/{slug}/MINT.md` with the new tokens. Append to the Component Tokens section.
+**Step 6d: Update MINT.md** at `~/mint-kit/projects/{slug}/MINT.md` with the new tokens. Append to the Component Tokens section.
 
 ### Step 7: Full Token Binding
 
@@ -831,7 +831,7 @@ After locking patterns, transition:
 
 ## Phase 2: Pattern Lock
 
-After all 3 DNA components are approved, write patterns to `~/.mint-kit/projects/{slug}/MINT.md`
+After all 3 DNA components are approved, write patterns to `~/mint-kit/projects/{slug}/MINT.md`
 (append to the Component Tokens section):
 
 ```markdown
@@ -1226,7 +1226,7 @@ Use `AskUserQuestion`:
 
 ### 7f: Update MINT.md
 
-Append component library reference to `~/.mint-kit/projects/{slug}/MINT.md`:
+Append component library reference to `~/mint-kit/projects/{slug}/MINT.md`:
 
 ```markdown
 ## Component Library

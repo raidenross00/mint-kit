@@ -107,7 +107,7 @@ Read `~/.claude/skills/mint-kit/shared/CONSULTATION_FLOW.md` for the full patter
 
 Read and follow `~/.claude/skills/mint-kit/shared/MINT_CHECKPOINT.md`.
 
-This skill persists state to `~/.mint-kit/projects/{project-slug}/mint-system-session.json`
+This skill persists state to `~/mint-kit/projects/{project-slug}/mint-system-session.json`
 after every major decision. If the skill crashes, the user can resume without re-making
 locked decisions.
 
@@ -128,9 +128,9 @@ Resume Router below. Treat whitespace-only or single-punctuation input as no pro
 If the user invoked `/mint-system` with NO prompt, do NOT silently proceed into the
 normal flow. Instead:
 
-1. Scan `~/.mint-kit/projects/` for existing project directories. Each subdirectory
+1. Scan `~/mint-kit/projects/` for existing project directories. Each subdirectory
    contains a MINT.md. Read the first line (`# [Product Name]`) of each to get names.
-2. Check for session files at `~/.mint-kit/projects/*/mint-system-session.json` (< 24h old)
+2. Check for session files at `~/mint-kit/projects/*/mint-system-session.json` (< 24h old)
 3. For each found MINT.md, check completeness using the **same criteria as Phase 1**:
    - `## Color` → Brand Tokens with at least primary + neutral scales (hex values present)
    - `## Typography` → font families named and type scale with sizes
@@ -142,8 +142,8 @@ Build the options list adaptively — only include what's relevant:
 |-----------|--------|
 | Always | "New design system" |
 | Session file exists, < 24h old | "Continue [product name from session]" |
-| Complete MINT.md exists in `~/.mint-kit/projects/{slug}/` | "Build [product] tokens in Figma" |
-| Incomplete MINT.md exists in `~/.mint-kit/projects/{slug}/` | "Update [product] system" |
+| Complete MINT.md exists in `~/mint-kit/projects/{slug}/` | "Build [product] tokens in Figma" |
+| Incomplete MINT.md exists in `~/mint-kit/projects/{slug}/` | "Update [product] system" |
 
 If multiple projects exist, list them all as separate options (e.g., "Build Tavern
 tokens in Figma", "Update Ecommerce Equation system").
@@ -210,7 +210,7 @@ was bypassed).
 
 On skill start:
 
-1. Check for session files at `~/.mint-kit/projects/*/mint-system-session.json`
+1. Check for session files at `~/mint-kit/projects/*/mint-system-session.json`
 2. If a session file matches context from the user's prompt, use that slug
 3. If no file, or file is > 24h old → skip to Phase 0 (fresh start)
 4. If file exists and < 24h old → read it, parse JSON
@@ -253,9 +253,9 @@ Before building the wizard:
 1. **If `entryGateChoice` is `"new"` in session state:** The user already chose "New
    design system" from the Entry Gate. Skip MINT.md detection entirely — proceed as
    if no MINT.md exists. It will be overwritten in Phase 5.
-2. Check for MINT.md in `~/.mint-kit/projects/`. If the user's prompt names a product,
-   derive the slug and check `~/.mint-kit/projects/{slug}/MINT.md`. If no prompt,
-   list all projects in `~/.mint-kit/projects/` and let the user pick (or proceed
+2. Check for MINT.md in `~/mint-kit/projects/`. If the user's prompt names a product,
+   derive the slug and check `~/mint-kit/projects/{slug}/MINT.md`. If no prompt,
+   list all projects in `~/mint-kit/projects/` and let the user pick (or proceed
    as new if none exist).
 3. Read project context from the codebase:
    - `README.md` (first 50 lines) — what the product is, who it's for
@@ -271,7 +271,7 @@ wizard. Adapt the `questions` array based on what you found.
 
 ### Building the questions array
 
-**If a matching MINT.md was found in `~/.mint-kit/projects/{slug}/`:**
+**If a matching MINT.md was found in `~/mint-kit/projects/{slug}/`:**
 Read the first 10 lines. Confirm the product name matches what the user asked for.
 
 **If the slug matched but names differ** (name collision): this is a different product.
@@ -337,7 +337,7 @@ Routing:
   its decisions. Proceed as if no MINT.md exists. It will be overwritten in Phase 5.
 - **Cancel:** Stop the skill.
 
-Projects are stored centrally in `~/.mint-kit/projects/`. The user can work on any
+Projects are stored centrally in `~/mint-kit/projects/`. The user can work on any
 project from any directory — the slug identifies the project, not the cwd.
 
 **CRITICAL — Options must answer the question asked.** If your question asks "what
@@ -444,7 +444,7 @@ The fast path is the middle step in the pipeline:
 
 ### Hydration: Parse MINT.md into Session
 
-Read `~/.mint-kit/projects/{slug}/MINT.md` (the slug was determined by the Entry Gate
+Read `~/mint-kit/projects/{slug}/MINT.md` (the slug was determined by the Entry Gate
 or Phase 1 project selection). Extract and populate session decisions as if Phases 1-3
 completed normally. Phase 4 reads from these session fields — it doesn't care how
 they got there.
@@ -792,7 +792,7 @@ After all dimensions are approved, Phase 4 creates the token system.
 
 ### Specimen Browser Tab — Single Tab, Auto-Refresh
 
-**ALL specimens write to ONE file:** `~/.mint-kit/specimen.html`.
+**ALL specimens write to ONE file:** `~/mint-kit/specimen.html`.
 Do NOT use separate files per specimen type (no `-color-primary.html`,
 `-type-display.html`, etc.). One file, overwritten each time.
 
@@ -831,11 +831,11 @@ _OS=$(uname -s)
 echo "OS: $_OS"
 
 # Create specimen directory
-mkdir -p ~/.mint-kit
+mkdir -p ~/mint-kit
 
 # Start a tiny HTTP server (pick a random port, run in background)
 _PORT=$(python3 -c 'import socket; s=socket.socket(); s.bind(("",0)); print(s.getsockname()[1]); s.close()')
-cd ~/.mint-kit && python3 -m http.server $_PORT &>/dev/null &
+cd ~/mint-kit && python3 -m http.server $_PORT &>/dev/null &
 _SERVER_PID=$!
 echo "SPECIMEN_SERVER: http://localhost:$_PORT/specimen.html"
 echo "SERVER_PID: $_SERVER_PID"
@@ -1197,7 +1197,7 @@ This is the only text that sits outside the columns:
 
 **Write specimen.html (Write 1):**
 
-Overwrite `~/.mint-kit/specimen.html` (single-tab pattern).
+Overwrite `~/mint-kit/specimen.html` (single-tab pattern).
 If this is the FIRST specimen in the session, run `xdg-open` (Linux) or `open`
 (macOS). Otherwise the existing tab auto-refreshes. Do NOT open a new tab.
 
@@ -1290,7 +1290,7 @@ tinted neutral each feel completely different.
 
 #### HTML Specimen Generation — Neutral
 
-Overwrite `~/.mint-kit/specimen.html` (single-tab pattern).
+Overwrite `~/mint-kit/specimen.html` (single-tab pattern).
 Open in browser: `xdg-open` (Linux) or `open` (macOS).
 On "More like this" iteration: overwrite, re-open.
 
@@ -1336,7 +1336,7 @@ tone and saturation — how do they sit within your locked primary + neutral?
 
 #### HTML Specimen Generation — Semantics
 
-Overwrite `~/.mint-kit/specimen.html` (single-tab pattern).
+Overwrite `~/mint-kit/specimen.html` (single-tab pattern).
 Open in browser: `xdg-open` (Linux) or `open` (macOS).
 On "More like this" iteration: overwrite, re-open.
 
@@ -1385,7 +1385,7 @@ complement (not clash with) the locked primary.
 
 #### HTML Specimen Generation — Accent
 
-Overwrite `~/.mint-kit/specimen.html` (single-tab pattern).
+Overwrite `~/mint-kit/specimen.html` (single-tab pattern).
 Open in browser: `xdg-open` (Linux) or `open` (macOS).
 On "More like this" iteration: overwrite, re-open.
 
@@ -1567,8 +1567,8 @@ sub-label), you've failed. Replace before generating.
 
 #### HTML Specimen Generation — Display
 
-Overwrite `~/.mint-kit/specimen.html` (single-tab pattern).
-Overwrite `~/.mint-kit/specimen.html` (single-tab pattern — see above).
+Overwrite `~/mint-kit/specimen.html` (single-tab pattern).
+Overwrite `~/mint-kit/specimen.html` (single-tab pattern — see above).
 If this is the FIRST specimen in the session, run `xdg-open` (Linux) or `open` (macOS).
 Otherwise the existing tab auto-refreshes. Do NOT open a new tab.
 
@@ -1619,8 +1619,8 @@ old-style, etc.).
 
 #### HTML Specimen Generation — Body
 
-Overwrite `~/.mint-kit/specimen.html` (single-tab pattern).
-Overwrite `~/.mint-kit/specimen.html` (single-tab pattern — see above).
+Overwrite `~/mint-kit/specimen.html` (single-tab pattern).
+Overwrite `~/mint-kit/specimen.html` (single-tab pattern — see above).
 If this is the FIRST specimen in the session, run `xdg-open` (Linux) or `open` (macOS).
 Otherwise the existing tab auto-refreshes. Do NOT open a new tab.
 
@@ -1662,8 +1662,8 @@ rule from display and body applies here too.
 
 #### HTML Specimen Generation — Data
 
-Overwrite `~/.mint-kit/specimen.html` (single-tab pattern).
-Overwrite `~/.mint-kit/specimen.html` (single-tab pattern — see above).
+Overwrite `~/mint-kit/specimen.html` (single-tab pattern).
+Overwrite `~/mint-kit/specimen.html` (single-tab pattern — see above).
 If this is the FIRST specimen in the session, run `xdg-open` (Linux) or `open` (macOS).
 Otherwise the existing tab auto-refreshes. Do NOT open a new tab.
 
@@ -1686,7 +1686,7 @@ the locked display + body stack (technical reasoning, not generic praise).
 
 The HTML previews showed the full journey: display options first, body options
 (with display) next, data options (with both) last. All used the single
-`~/.mint-kit/specimen.html` file (auto-refreshing in one tab).
+`~/mint-kit/specimen.html` file (auto-refreshing in one tab).
 
 Confirm the full stack in plain text:
 ```
@@ -1725,7 +1725,7 @@ implies one approach (e.g., "light and airy" = softer contrast), lead with one.
 
 #### HTML Specimen Generation — Text Colors
 
-Overwrite `~/.mint-kit/specimen.html` (single-tab pattern).
+Overwrite `~/mint-kit/specimen.html` (single-tab pattern).
 Open in browser: `xdg-open` (Linux) or `open` (macOS).
 On iteration: overwrite, re-open.
 
@@ -1785,7 +1785,7 @@ and text colors. Each option shows the SAME content at different spacings:
 
 #### HTML Specimen Generation — Spacing
 
-Overwrite `~/.mint-kit/specimen.html` (single-tab pattern).
+Overwrite `~/mint-kit/specimen.html` (single-tab pattern).
 If this is the FIRST specimen in the session, run `xdg-open` (Linux) or `open` (macOS).
 Otherwise the existing tab auto-refreshes. Do NOT open a new tab.
 
@@ -2288,7 +2288,7 @@ brand looks like as an environment." Tint the surfaces. Tint the borders.
 Tint the shadows. Use primary-50 at 5-8% opacity as a surface wash. Use
 primary-800 for borders instead of neutral-700. Make the brand breathe.
 
-Overwrite `~/.mint-kit/specimen.html` (single-tab pattern).
+Overwrite `~/mint-kit/specimen.html` (single-tab pattern).
 
 HTML structure per interpretation:
 - Full-width column with the realistic page layout
@@ -2371,7 +2371,7 @@ the same or reduces by 1-2px.
 **Preview before committing.** Generate an HTML preview showing desktop and mobile
 side by side BEFORE creating Figma variables:
 
-Overwrite `~/.mint-kit/specimen.html` (single-tab pattern):
+Overwrite `~/mint-kit/specimen.html` (single-tab pattern):
 - Left column (max-width: 1440px): desktop type scale, all headings + body levels
 - Right column (max-width: 440px): mobile type scale at derived sizes
 - Real product content, locked fonts
@@ -2599,7 +2599,7 @@ If anything is missing, create it before writing MINT.md.
 ### Write MINT.md
 
 Derive the project slug from the product name (lowercase, spaces → hyphens, strip
-non-alphanumeric except hyphens). Write to `~/.mint-kit/projects/{slug}/MINT.md`.
+non-alphanumeric except hyphens). Write to `~/mint-kit/projects/{slug}/MINT.md`.
 Create the directory if it doesn't exist.
 
 Use the verified Figma state + your conversation knowledge to write MINT.md:

@@ -2,14 +2,14 @@
 
 Read `~/.claude/settings.json` and `~/.claude/settings.local.json`.
 
-**Specimen directory:** `~/.mint-kit/` (NOT `/tmp/`). Firefox snap on Ubuntu
-cannot read `/tmp/` due to sandbox restrictions. `~/.mint-kit/` is always
-readable by the browser. The specimen file is `~/.mint-kit/specimen.html` —
+**Specimen directory:** `~/mint-kit/` (NOT `/tmp/`). Firefox snap on Ubuntu
+cannot read `/tmp/` due to sandbox restrictions. `~/mint-kit/` is always
+readable by the browser. The specimen file is `~/mint-kit/specimen.html` —
 a single shared file overwritten on each write.
 
 Before writing any specimens, ensure the directory exists:
 ```bash
-mkdir -p ~/.mint-kit/projects
+mkdir -p ~/mint-kit/projects
 ```
 
 **Required permissions:**
@@ -17,9 +17,9 @@ mkdir -p ~/.mint-kit/projects
 - `mcp__figma__get_screenshot` — Figma screenshot verification
 - `WebFetch` — fetching Google Fonts CSS for specimen generation
 - `WebSearch` — Phase 2 competitive research
-- `Write(~/.mint-kit/*)` — HTML specimen files for exploration phases
-- `Bash(xdg-open ~/.mint-kit/*)` — opening specimens in browser
-- `Bash(open ~/.mint-kit/*)` — opening specimens in browser (macOS)
+- `Write(~/mint-kit/*)` — HTML specimen files for exploration phases
+- `Bash(xdg-open ~/mint-kit/*)` — opening specimens in browser
+- `Bash(open ~/mint-kit/*)` — opening specimens in browser (macOS)
 
 **Step 1: Silent check.** Read the settings. Check two things:
 (a) Is the tool permission mode already `acceptEdits` or higher (auto/bypassPermissions)?
@@ -96,12 +96,12 @@ also persist. Do not touch any permissions at cleanup.
 **2. Track and clean up THIS SESSION'S specimen files only.**
 
 During the skill run, maintain a list of every specimen file you write. After each
-`Write` to `~/.mint-kit/`, append the filename to an internal list. Example:
+`Write` to `~/mint-kit/`, append the filename to an internal list. Example:
 ```
 SESSION_SPECIMENS:
-  ~/.mint-kit/mint-specimen-color-primary.html
-  ~/.mint-kit/mint-specimen-color-neutral.html
-  ~/.mint-kit/mint-specimen-type-display.html
+  ~/mint-kit/mint-specimen-color-primary.html
+  ~/mint-kit/mint-specimen-color-neutral.html
+  ~/mint-kit/mint-specimen-type-display.html
   ...
 ```
 
@@ -111,10 +111,10 @@ At skill completion, offer cleanup via AskUserQuestion. List the EXACT files:
 {
   "questions": [{
     "header": "Cleanup",
-    "question": "Your design system is complete. This session created [N] specimen files in ~/.mint-kit/. These were the color/type/dark-mode previews you saw in your browser. Want to delete them? Only the files from THIS session are removed. [List the filenames.]",
+    "question": "Your design system is complete. This session created [N] specimen files in ~/mint-kit/. These were the color/type/dark-mode previews you saw in your browser. Want to delete them? Only the files from THIS session are removed. [List the filenames.]",
     "multiSelect": false,
     "options": [
-      { "label": "Yes, clean up (Recommended)", "description": "Deletes only the [N] files listed above. Nothing else in ~/.mint-kit/ is touched." },
+      { "label": "Yes, clean up (Recommended)", "description": "Deletes only the [N] files listed above. Nothing else in ~/mint-kit/ is touched." },
       { "label": "No, keep them", "description": "The files stay if you want to reference them later." }
     ]
   }]
@@ -123,10 +123,10 @@ At skill completion, offer cleanup via AskUserQuestion. List the EXACT files:
 
 If yes: delete ONLY the tracked files, one by one. Do NOT `rm -rf` the directory.
 ```bash
-rm ~/.mint-kit/mint-specimen-color-primary.html
-rm ~/.mint-kit/mint-specimen-color-neutral.html
+rm ~/mint-kit/mint-specimen-color-primary.html
+rm ~/mint-kit/mint-specimen-color-neutral.html
 # ... each file explicitly
 ```
-If the directory is empty after deletion, remove it: `rmdir ~/.mint-kit/ 2>/dev/null`
+If the directory is empty after deletion, remove it: `rmdir ~/mint-kit/ 2>/dev/null`
 
 If no: do nothing.

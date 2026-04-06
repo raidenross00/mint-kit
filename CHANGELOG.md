@@ -1,20 +1,27 @@
 # Changelog
 
+## [0.3.1] — 2026-04-06
+
+### Fixed
+- **Specimen path uses non-hidden directory** — moved from `~/.mint-kit/` to
+  `~/mint-kit/`. Firefox on Linux blocks `file://` access to dotfile directories,
+  so specimens were inaccessible in the browser.
+
 ## [0.3.0] — 2026-04-06
 
 ### Changed
 - **Centralized project storage** — MINT.md files now live at
-  `~/.mint-kit/projects/{slug}/MINT.md` instead of `./MINT.md` in cwd.
+  `~/mint-kit/projects/{slug}/MINT.md` instead of `./MINT.md` in cwd.
   Multiple projects can coexist. Skills can run from any directory.
 - **Session files co-located** — session checkpoints moved from
-  `~/.cache/mint-kit/{slug}/` into `~/.mint-kit/projects/{slug}/` alongside
+  `~/.cache/mint-kit/{slug}/` into `~/mint-kit/projects/{slug}/` alongside
   MINT.md. One directory per project holds everything.
 - **Specimen HTML moved** — from `~/Downloads/mint-kit/specimen.html` to
-  `~/.mint-kit/specimen.html`. All mint-kit state under one tree.
+  `~/mint-kit/specimen.html`. All mint-kit state under one tree.
 - **Slug derived from product name** — not cwd directory name. Consistent
   across skills regardless of where you run them.
-- Entry gate now lists all existing projects from `~/.mint-kit/projects/`.
-- mint-lib searches `~/.mint-kit/projects/` instead of cwd for MINT.md files.
+- Entry gate now lists all existing projects from `~/mint-kit/projects/`.
+- mint-lib searches `~/mint-kit/projects/` instead of cwd for MINT.md files.
 
 ## [0.2.0] — 2026-04-06
 

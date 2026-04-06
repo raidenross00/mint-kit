@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# v0.3.0 migration — centralize state under ~/.mint-kit/projects/
+# v0.3.0 migration — centralize state under ~/mint-kit/projects/
 #
 # Moves:
-#   ~/.cache/mint-kit/{slug}/*  →  ~/.mint-kit/projects/{slug}/
-#   ~/Downloads/mint-kit/specimen.html  →  ~/.mint-kit/specimen.html
-#   ./MINT.md (cwd)  →  ~/.mint-kit/projects/{slug}/MINT.md (best-effort)
+#   ~/.cache/mint-kit/{slug}/*  →  ~/mint-kit/projects/{slug}/
+#   ~/Downloads/mint-kit/specimen.html  →  ~/mint-kit/specimen.html
+#   ./MINT.md (cwd)  →  ~/mint-kit/projects/{slug}/MINT.md (best-effort)
 #
 # Idempotent — safe to run multiple times.
 set -euo pipefail
 
-PROJECTS_DIR="$HOME/.mint-kit/projects"
+PROJECTS_DIR="$HOME/mint-kit/projects"
 mkdir -p "$PROJECTS_DIR"
 
 # ─── Move session files from ~/.cache/mint-kit/ ─────────────────
@@ -35,7 +35,7 @@ fi
 
 # ─── Move specimen from ~/Downloads/mint-kit/ ───────────────────
 OLD_SPECIMEN="$HOME/Downloads/mint-kit/specimen.html"
-NEW_SPECIMEN="$HOME/.mint-kit/specimen.html"
+NEW_SPECIMEN="$HOME/mint-kit/specimen.html"
 if [ -f "$OLD_SPECIMEN" ] && [ ! -f "$NEW_SPECIMEN" ]; then
   mv "$OLD_SPECIMEN" "$NEW_SPECIMEN"
   rmdir "$HOME/Downloads/mint-kit" 2>/dev/null || true

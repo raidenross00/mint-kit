@@ -9,11 +9,11 @@
 # Env overrides (for testing):
 #   MINT_KIT_DIR        — override auto-detected mint-kit root
 #   MINT_REMOTE_URL     — override remote VERSION URL
-#   MINT_STATE_DIR      — override ~/.mint-kit state directory
+#   MINT_STATE_DIR      — override ~/mint-kit state directory
 set -euo pipefail
 
 MINT_KIT_DIR="${MINT_KIT_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
-STATE_DIR="${MINT_STATE_DIR:-$HOME/.mint-kit}"
+STATE_DIR="${MINT_STATE_DIR:-$HOME/mint-kit}"
 CACHE_FILE="$STATE_DIR/last-update-check"
 MARKER_FILE="$STATE_DIR/just-upgraded-from"
 SNOOZE_FILE="$STATE_DIR/update-snoozed"
@@ -21,7 +21,7 @@ VERSION_FILE="$MINT_KIT_DIR/VERSION"
 REMOTE_URL="${MINT_REMOTE_URL:-https://raw.githubusercontent.com/raidenross00/mint-kit/main/VERSION}"
 
 # ─── Config reader (inline, no external binary) ─────────────────
-# _read_config <key> — reads a value from ~/.mint-kit/config.yaml
+# _read_config <key> — reads a value from ~/mint-kit/config.yaml
 # Returns empty string if file missing or key not found.
 _read_config() {
   local key="$1"

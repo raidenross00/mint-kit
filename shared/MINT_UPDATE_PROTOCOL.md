@@ -55,7 +55,7 @@ VERSION (semver source of truth)
 
 bin/mint-update-check (version check script)
   ← VERSION (local version)
-  → ~/.mint-kit/ state files (cache, snooze, marker)
+  → ~/mint-kit/ state files (cache, snooze, marker)
 
 migrations/ (upgrade migration scripts)
   ← MINT_UPGRADE.md §1 Step 4 (migration runner)
