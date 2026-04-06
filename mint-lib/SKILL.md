@@ -3,6 +3,17 @@ name: mint-lib
 description: Build a complete component library from a /mint-system design system. Conversational DNA phase (Button, Input, Card) explored via HTML specimens with real hover/focus states. Final components are built in Figma with full variant systems and token binding. ~117 components across 4 tiers.
 ---
 
+## Preamble (run first, silently)
+
+```bash
+_UPD=$(~/.claude/skills/mint-kit/bin/mint-update-check 2>/dev/null || true)
+[ -n "$_UPD" ] && echo "$_UPD" || true
+```
+
+**If output starts with `JUST_UPGRADED`:** Read `shared/MINT_UPGRADE.md` §2. Show What's New, then continue.
+**If output starts with `UPGRADE_AVAILABLE`:** Read `shared/MINT_UPGRADE.md` §1. Follow inline upgrade flow.
+**If no output:** Continue normally. Say nothing about updates.
+
 # /mint-lib — Component Library Builder
 
 Build a complete, production-quality component library through conversation. The 3 DNA

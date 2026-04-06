@@ -40,6 +40,24 @@ CONSULTATION_FLOW.md (progressive build pattern)
   → mint-system SKILL.md (Phase 3 specimen builds)
   → MINT_EXAMPLES.md § progressive grid, terminal voice, specimen naming
 
+MINT_UPGRADE.md (upgrade protocol + config management)
+  → mint-system SKILL.md (preamble update-check block)
+  → mint-lib SKILL.md (preamble update-check block)
+  ← VERSION (version source for bin/mint-update-check)
+  ← CHANGELOG.md (What's New content for §1 Step 6, §2)
+  → MINT_EXAMPLES.md § Update Check Preamble Format
+
+VERSION (semver source of truth)
+  → bin/mint-update-check (local version read)
+  → CHANGELOG.md (version entries must match)
+
+bin/mint-update-check (version check script)
+  ← VERSION (local version)
+  → ~/.mint-kit/ state files (cache, snooze, marker)
+
+migrations/ (upgrade migration scripts)
+  ← MINT_UPGRADE.md §1 Step 4 (migration runner)
+
 MINT_VOICE.md (tone + posture)
   → mint-system SKILL.md (all user-facing output)
   → mint-lib SKILL.md (all user-facing output)
@@ -98,6 +116,26 @@ When you modify a file, check every downstream dependency listed below.
 - [ ] Confirm the change matches the owning protocol doc (ownership table at top)
 - [ ] If it doesn't match: you're updating the WRONG file — update the protocol doc first
 
+### If you change `MINT_UPGRADE.md`:
+- [ ] Update MINT_EXAMPLES.md § Update Check Preamble Format
+- [ ] If upgrade flow changed: confirm preamble blocks in both SKILL.md files still align
+- [ ] If config keys changed: update config table in MINT_UPGRADE.md §3
+- [ ] If migration runner changed: confirm migrations/ scripts are compatible
+
+### If you change `VERSION`:
+- [ ] Update CHANGELOG.md with entry for the new version
+- [ ] Confirm bin/mint-update-check regex still matches the version format
+
+### If you change `bin/mint-update-check`:
+- [ ] Confirm output contract matches what SKILL.md preambles expect
+- [ ] Confirm state file paths match MINT_UPGRADE.md §3 state files table
+- [ ] Run shellcheck on the script
+
+### If you add a file to `migrations/`:
+- [ ] Confirm the script is idempotent (safe to run multiple times)
+- [ ] Confirm the filename matches `v{VERSION}.sh` format
+- [ ] Confirm MINT_UPGRADE.md §1 Step 4 migration runner would pick it up correctly
+
 ### If you change `MINT_VOICE.md`:
 - [ ] No downstream file updates needed — skills reference it directly
 - [ ] But grep both skills for hardcoded tone/voice that should follow the new rules
@@ -124,5 +162,5 @@ source is wrong. Fix the source, then fix the mirror.
 5. If you're unsure whether something drifted: grep for the specific pattern
    across all files in `~/.claude/skills/mint-kit/`
 
-This protocol is manual. It works because Mint Kit has 10 files, not 100. If the
-file count grows past 15, consider a lint script that checks cross-references.
+This protocol is manual. It works because Mint Kit has ~15 files, not 100. If the
+file count grows past 20, consider a lint script that checks cross-references.

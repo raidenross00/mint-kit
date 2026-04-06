@@ -3,6 +3,17 @@ name: mint-system
 description: Build a complete design system. HTML specimens for exploration, Figma for token system and team library publishing. Research, propose, explore via HTML previews, create 3-layer token variables (Brand/Alias/Role), lock into MINT.md. Part of the Mint Kit series.
 ---
 
+## Preamble (run first, silently)
+
+```bash
+_UPD=$(~/.claude/skills/mint-kit/bin/mint-update-check 2>/dev/null || true)
+[ -n "$_UPD" ] && echo "$_UPD" || true
+```
+
+**If output starts with `JUST_UPGRADED`:** Read `shared/MINT_UPGRADE.md` §2. Show What's New, then continue.
+**If output starts with `UPGRADE_AVAILABLE`:** Read `shared/MINT_UPGRADE.md` §1. Follow inline upgrade flow.
+**If no output:** Continue normally. Say nothing about updates.
+
 # /mint-system — Design System Builder
 
 Build a complete design system through conversation. Exploration specimens (type,

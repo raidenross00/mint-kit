@@ -16,6 +16,7 @@ This file defines FORMATS (how things look). The protocol docs own the LOGIC
 | Checkpoint one-liner | MINT_CHECKPOINT.md | this file |
 | Verification dispatch | MINT_VERIFICATION.md | this file |
 | Figma variable structure | mint-system SKILL.md Phase 4 | this file |
+| Update check preamble | MINT_UPGRADE.md | this file |
 
 Protocol docs are authoritative. This file mirrors them for quick reference.
 
@@ -214,3 +215,23 @@ intent vs Figma actual state. Gate on PASS before proceeding.
 ```
 
 Never inline the verification protocol. The full process is in MINT_VERIFICATION.md.
+
+## Update Check Preamble Format
+
+In skill files, the update check preamble is a fixed block after the frontmatter:
+
+```markdown
+## Preamble (run first, silently)
+
+\`\`\`bash
+_UPD=$(~/.claude/skills/mint-kit/bin/mint-update-check 2>/dev/null || true)
+[ -n "$_UPD" ] && echo "$_UPD" || true
+\`\`\`
+
+**If output starts with `JUST_UPGRADED`:** Read `shared/MINT_UPGRADE.md` §2. Show What's New, then continue.
+**If output starts with `UPGRADE_AVAILABLE`:** Read `shared/MINT_UPGRADE.md` §1. Follow inline upgrade flow.
+**If no output:** Continue normally. Say nothing about updates.
+```
+
+This block MUST be identical in every SKILL.md. The full upgrade protocol is in
+MINT_UPGRADE.md. Never inline upgrade logic into skill files.
