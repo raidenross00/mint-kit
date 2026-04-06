@@ -117,9 +117,95 @@ old specimen HTML or research results. See MINT_CHECKPOINT.md § Context Hygiene
 
 ---
 
+## Entry Gate (before Resume Router)
+
+**This runs FIRST — before Resume Router, before Phase 0.**
+
+If the user invoked `/mint-system` with a prompt (any text after the slash command —
+not just whitespace or punctuation), skip this gate entirely and proceed to the
+Resume Router below. Treat whitespace-only or single-punctuation input as no prompt.
+
+If the user invoked `/mint-system` with NO prompt, do NOT silently proceed into the
+normal flow. Instead:
+
+1. Derive project-slug from CWD directory name
+2. Check for `~/.cache/mint-kit/{slug}/mint-system-session.json` (< 24h old, valid JSON)
+3. Check for `./MINT.md` in the current working directory
+4. If MINT.md exists, check completeness using the **same criteria as Phase 1**:
+   - `## Color` → Brand Tokens with at least primary + neutral scales (hex values present)
+   - `## Typography` → font families named and type scale with sizes
+   - `## Spacing` → scale with px values
+
+Build the options list adaptively — only include what's relevant:
+
+| Condition | Option |
+|-----------|--------|
+| Always | "New design system" |
+| Session file exists, < 24h old | "Continue [product name from session]" |
+| MINT.md exists AND passes completeness check above | "Build [product] tokens in Figma" |
+| MINT.md exists but FAILS completeness check | "Update [product] system" |
+
+**If ONLY "New design system" is relevant** (no session, no MINT.md at all): skip
+this question entirely. Proceed directly to Phase 0 → Phase 1 wizard. Don't make
+the user click through a single-option form.
+
+**If 2+ options are relevant**, present. Place the recommended option at position 1:
+```json
+{
+  "questions": [
+    {
+      "header": "Mint System",
+      "question": "What are we building?",
+      "multiSelect": false,
+      "options": [
+        { "label": "Build [product] tokens in Figma (Recommended)", "description": "MINT.md has all the decisions. Skip to Figma variable creation." },
+        { "label": "Continue [product name]", "description": "Resume from [phase]. Locked: [summary of decisions]." },
+        { "label": "New design system", "description": "Start fresh. I'll walk you through color, type, and spacing decisions." }
+      ]
+    },
+    {
+      "header": "Figma file",
+      "question": "I need a Figma file to build your design system in. Got one already, or should I create a new file?",
+      "multiSelect": false,
+      "options": [
+        { "label": "I have a file", "description": "I'll paste the URL after submitting" },
+        { "label": "Create one for me", "description": "I'll make a new file in your Figma workspace" }
+      ]
+    }
+  ]
+}
+```
+
+Only include options that apply. Recommended option is always position 1. Priority:
+- If "Build in Figma" applies → recommend it (most direct path)
+- Else if "Continue" applies → recommend it
+- Else if "Update" applies → recommend it
+- "New design system" is never recommended when other options exist
+
+The **Figma file tab** is always included (every path eventually needs a Figma file).
+Store the `figmaFileKey` from the user's response.
+
+**Routing after selection:**
+- **New design system:** Delete any existing session file. Set `entryGateChoice: "new"`
+  in session state, then proceed to Phase 0 → Phase 1. Phase 1 will see this flag
+  and skip MINT.md detection (the user already chose "new").
+- **Update [product] system:** Proceed to Phase 0 → Phase 1. Phase 1 will detect the
+  incomplete MINT.md and use it as starting context (same as the "Update" path).
+- **Continue:** Load decisions + figmaState from session file. Skip all
+  `completedPhases`. Jump to `currentPhase`. Tell user: "Resuming at [phase].
+  Locked: [summary]." The Resume Router below is skipped entirely.
+- **Build in Figma:** Jump to Fast Path (see below). The Resume Router, Phase 0-3
+  are all skipped. The `figmaFileKey` comes from the Figma file tab above.
+
+---
+
 ## Resume Router
 
-**This runs BEFORE Phase 0.** On skill start:
+**This runs BEFORE Phase 0.** It is skipped if the Entry Gate already ran (user had
+no prompt). The Resume Router only runs when the user provided a prompt (Entry Gate
+was bypassed).
+
+On skill start:
 
 1. Derive project-slug from CWD directory name
 2. Check for `~/.cache/mint-kit/{slug}/mint-system-session.json`
@@ -161,7 +247,10 @@ Phase 1.** Permissions are a gate, not a task. Do NOT stop here.
 ## Phase 1: Context Gathering (multi-step wizard)
 
 Before building the wizard:
-1. Check for MINT.md in the CURRENT working directory ONLY (NOT a recursive search).
+1. **If `entryGateChoice` is `"new"` in session state:** The user already chose "New
+   design system" from the Entry Gate. Skip MINT.md detection entirely — proceed as
+   if no MINT.md exists. It will be overwritten in Phase 5.
+2. Check for MINT.md in the CURRENT working directory ONLY (NOT a recursive search).
    If `./MINT.md` exists, this is a resume/update. If not, this is a new system.
    Do NOT search other projects or parent directories. The user invoked /mint-system
    HERE — they want a design system for THIS project, not a picker of other projects.
@@ -189,22 +278,60 @@ Tell the user: "There's a MINT.md here from [product name], but that's a differe
 product. I'll start fresh for [current product]." Then proceed as if no MINT.md exists.
 Do NOT offer to update or carry over tokens from an unrelated system.
 
-**If the MINT.md is for THIS product** (same name, same purpose): use AskUserQuestion:
+**If the MINT.md is for THIS product** (same name, same purpose):
+
+First, check if the MINT.md is **complete** — has actual values (not just headers) in:
+- `## Color` → Brand Tokens with at least primary + neutral scales (hex values present)
+- `## Typography` → font families named and type scale with sizes
+- `## Spacing` → scale with px values
+
+**If MINT.md is complete**, offer fast path as recommended:
+```json
+{
+  "questions": [
+    {
+      "header": "Existing",
+      "question": "You have a complete MINT.md for [product] with [summarize: N color scales, font names, spacing]. Want to go straight to Figma, or revisit decisions first?",
+      "multiSelect": false,
+      "options": [
+        { "label": "Build in Figma (Recommended)", "description": "Skip consultation. Load all tokens from MINT.md and create Figma variables directly." },
+        { "label": "Review + update first", "description": "Walk through the system. Keep existing decisions, fill gaps, change what's wrong." },
+        { "label": "Start fresh", "description": "Ignore this MINT.md. Every decision from scratch." },
+        { "label": "Cancel", "description": "Stop. Keep existing MINT.md as-is." }
+      ]
+    },
+    {
+      "header": "Figma file",
+      "question": "I need a Figma file to build your design system in. Got one already, or should I create a new file?",
+      "multiSelect": false,
+      "options": [
+        { "label": "I have a file", "description": "I'll paste the URL after submitting" },
+        { "label": "Create one for me", "description": "I'll make a new file in your Figma workspace" }
+      ]
+    }
+  ]
+}
+```
+
+**If MINT.md is incomplete** (missing sections or empty values), offer update as recommended:
 ```json
 {
   "questions": [{
     "header": "Existing",
-    "question": "You already have a MINT.md for this product. Want to update it (keep existing decisions, fill gaps) or start fresh (overwrite everything)?",
+    "question": "You have a MINT.md for [product] but it's incomplete — [missing sections]. Want to fill the gaps or start over?",
     "multiSelect": false,
     "options": [
-      { "label": "Update (Recommended)", "description": "Keep locked decisions from the existing system. Only re-decide what's changed." },
+      { "label": "Update (Recommended)", "description": "Keep existing decisions. Fill what's missing." },
       { "label": "Start fresh", "description": "Ignore the existing MINT.md completely. Every decision from scratch." },
       { "label": "Cancel", "description": "Stop. Keep the existing MINT.md as-is." }
     ]
   }]
 }
 ```
-- **Update:** Read the existing MINT.md. Use its decisions (fonts, colors, spacing)
+
+Routing:
+- **Build in Figma:** Jump to Fast Path (section below). Phases 1-3 are skipped.
+- **Review + update / Update:** Read the existing MINT.md. Use its decisions (fonts, colors, spacing)
   as starting context for Phase 3. Skip decisions that are already locked.
 - **Fresh:** Ignore the existing MINT.md completely. Do NOT read it, do NOT reference
   its decisions. Proceed as if no MINT.md exists. It will be overwritten in Phase 5.
@@ -300,8 +427,169 @@ deliberate whitespace. Amalfi, not Bondi."
   ```
 - If user picked "Research my competitors" → run Phase 2 before proposals
 - If user picked a vibe direction → use that to inform Phase 3 proposals
+- If user picked "Build in Figma" → jump to Fast Path below (skip Phase 2 and 3)
 
 **Checkpoint:** Update session — `decisions.product` set, `figmaFileKey` stored, phase `1` complete.
+
+---
+
+## Fast Path: MINT.md → Phase 4
+
+**This section runs when the user chose "Build in Figma" from the Entry Gate or
+Phase 1 wizard.** It bridges the gap between a complete MINT.md (from /mint-extract
+or a previous /mint-system run) and Phase 4 (Figma variable creation).
+
+The fast path is the middle step in the pipeline:
+**mint-extract → mint-system (fast path) → mint-lib**
+
+### Hydration: Parse MINT.md into Session
+
+Read the entire MINT.md. Extract and populate session decisions as if Phases 1-3
+completed normally. Phase 4 reads from these session fields — it doesn't care how
+they got there.
+
+**Product context:** The Fast Path skips Phase 1's context gathering. To populate
+`decisions.product`, read `README.md` (first 50 lines) and `package.json` (first
+20 lines) from the CWD, same as Phase 1 step 2. Also extract the product name from
+the MINT.md header (`# [Product Name] — Design System`). Store in `decisions.product`.
+
+**Required extractions:**
+
+| MINT.md Section | Session Field | What to extract |
+|-----------------|---------------|-----------------|
+| `# [Product Name]` header | `decisions.product` | Product name and inferred product type |
+| `## Aesthetic Direction` | `decisions.vibeLock` | The direction text (rationale for Phase 4 dark mode opinion) |
+| `## Color` → `### Brand Tokens` | `decisions.colors.primary` | primary-500 hex value |
+| `## Color` → `### Brand Tokens` | `decisions.colors.neutral` | neutral-500 hex value |
+| `## Color` → `### Brand Tokens` | `decisions.colors.accent` | accent-500 hex value (if present) |
+| `## Color` → `### Brand Tokens` | `decisions.colors.semantics` | success/error/warning/info hex values (if present) |
+| `## Typography` | `decisions.fonts.display` | Display font family name |
+| `## Typography` | `decisions.fonts.body` | Body font family name |
+| `## Typography` | `decisions.fonts.data` | Data font family name |
+| `## Typography` → `### Type Scale` | `decisions.typeScale` | All size tokens with px values |
+| `## Typography` → `### Text Styles` | `decisions.textStyles` | Style specs (font, size, line-height, letter-spacing) |
+| `## Spacing` | `decisions.spacing` | Full scale with px values |
+| `## Opacity` | `decisions.opacity` | All opacity values |
+| `## Elevation` | `decisions.elevation` | Shadow specs |
+| `## Surfaces` | `decisions.surfaces` | Surface mappings |
+| `## Contrast Pairings` | `decisions.textColors` | Text color assignments (heading, body, muted, etc.) |
+| `## Responsive Typography` | `decisions.responsive` | Desktop/mobile size pairs |
+
+**If a section is missing or empty:** Use the default values that Phase 3 would have
+proposed (e.g., spacing defaults to 4px base scale, opacity defaults to
+disabled=0.4/hover=0.08/pressed=0.12/overlay=0.6/loading=0.6). Log the default in
+the session so Phase 4 knows it wasn't explicitly chosen.
+
+**If color scales are present but individual hex values are in a table:** Parse the
+table rows. The Brand Tokens table has `| Token | Hex | RGB (0-1) | Usage |` format.
+Extract the Hex column for each token name.
+
+### After Hydration — Check for Existing Figma Variables
+
+Before proceeding to Phase 4, check whether the Figma file already has variables
+from a previous run. The user already provided a Figma file (from the wizard's
+Figma tab). Read back what's in it:
+
+```javascript
+// TARGET: mint-system file (fileKey: ...)
+const variables = figma.variables.getLocalVariables();
+const collections = {};
+for (const v of variables) {
+  const col = figma.variables.getVariableCollectionById(v.variableCollectionId);
+  if (!collections[col.name]) collections[col.name] = { count: 0, names: [] };
+  collections[col.name].count++;
+  if (collections[col.name].names.length < 5) collections[col.name].names.push(v.name);
+}
+return { collections, totalVariables: variables.length };
+```
+
+**If the file has 0 variables:** Proceed to Phase 4 normally.
+
+**If the file has existing variables (any of Brand/Alias/Map/Responsive collections):**
+This MINT.md likely already has a built Figma system. Ask:
+
+```json
+{
+  "questions": [{
+    "header": "Figma variables",
+    "question": "This file already has [N] variables across [collection names]. These were probably created from a previous /mint-system run.",
+    "multiSelect": false,
+    "options": [
+      { "label": "Overwrite (Recommended)", "description": "Deletes all Brand/Alias/Map/Responsive variables and mint-system styles. Cannot be undone." },
+      { "label": "Skip to publish", "description": "Variables are already correct. Jump to library publishing." },
+      { "label": "Use a different file", "description": "Keep this file's variables. I'll create a new Figma file instead." }
+    ]
+  }]
+}
+```
+
+Routing:
+- **Overwrite:** Delete only mint-system collections and styles, then proceed to
+  Phase 4 Step 1. Filter by name to avoid destroying unrelated content:
+  ```javascript
+  // TARGET: mint-system file (fileKey: ...)
+  const mintCollections = ["Brand", "Alias", "Map", "Responsive"];
+  const mintStylePrefixes = ["Display/", "Heading/", "Body/", "Caption", "Label", "Data/", "Elevation/", "Focus/"];
+  
+  const collections = figma.variables.getLocalVariableCollections();
+  let removedVars = 0, removedCols = 0;
+  for (const c of collections) {
+    if (mintCollections.includes(c.name)) {
+      const vars = c.variableIds.map(id => figma.variables.getVariableById(id));
+      for (const v of vars) { v.remove(); removedVars++; }
+      c.remove(); removedCols++;
+    }
+  }
+  
+  const textStyles = figma.getLocalTextStyles();
+  let removedTS = 0;
+  for (const s of textStyles) {
+    if (mintStylePrefixes.some(p => s.name.startsWith(p))) { s.remove(); removedTS++; }
+  }
+  
+  const effectStyles = figma.getLocalEffectStyles();
+  let removedES = 0;
+  for (const s of effectStyles) {
+    if (mintStylePrefixes.some(p => s.name.startsWith(p))) { s.remove(); removedES++; }
+  }
+  
+  return { removed: { variables: removedVars, collections: removedCols, textStyles: removedTS, effectStyles: removedES } };
+  ```
+- **Skip to publish:** The existing variables are assumed correct. Skip the MINT.md
+  write (it already exists and is the source of truth). Update the existing MINT.md
+  to add or update the `Figma source: [URL]` line if missing. Then jump directly to
+  Phase 5 § Publish as Team Library.
+- **Use a different file:** Ask for a new Figma file URL or create one, update
+  `figmaFileKey`, then **re-run this detection step** against the new file (loop back
+  to "Check for Existing Figma Variables" above). Do not assume the new file is empty.
+
+_Future: an "Update changes only" option (upsert) will diff existing variables
+against MINT.md and only create/update what changed. Not yet implemented._
+
+### Proceed to Phase 4
+
+Set session state:
+```json
+{
+  "completedPhases": ["0", "1", "2", "3", "3a", "3b-i", "3b-ii", "3b-iii", "3b-iv", "3c-i", "3c-ii", "3c-iii", "3d", "3e"],
+  "currentPhase": "4",
+  "fastPath": true
+}
+```
+
+Tell the user:
+> "Loaded [N] color tokens, [fonts], [spacing scale] from MINT.md. Skipping to
+> Figma variable creation."
+
+Then proceed directly to Phase 4: Create Token System. Everything from Phase 4
+onward runs exactly as normal — it reads from session decisions.
+
+**Do NOT re-generate color scales.** The MINT.md already has the full 50-950 scales
+with hex values. Use those exact values in Phase 4 Step 1 rather than re-running
+the compounding opacity formula. The user (or /mint-extract) already approved these
+specific colors.
+
+---
 
 ## Phase 2: Research (if selected — strongly recommended)
 
@@ -1763,6 +2051,11 @@ populate the contrast matrix cells.
 ### Step 1: Create Brand Variables — Colors
 
 Try all color variables in ONE call. Split only if it fails due to size.
+
+**Fast path override:** If `session.fastPath === true`, do NOT regenerate color
+scales from the compounding opacity formula. The MINT.md already has approved hex
+values for every scale step. Convert those hex values to RGBA 0-1 format and use
+them directly. This preserves the exact colors the user (or /mint-extract) approved.
 
 **Color scales** — generate using compounding opacity (see Scale Generation above), store as RGBA {r, g, b, a} on 0-1 scale:
 - Brand/Color/primary-50 through primary-950 (full 10-step scale)

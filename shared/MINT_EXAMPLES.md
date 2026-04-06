@@ -16,6 +16,8 @@ This file defines FORMATS (how things look). The protocol docs own the LOGIC
 | Checkpoint one-liner | MINT_CHECKPOINT.md | this file |
 | Verification dispatch | MINT_VERIFICATION.md | this file |
 | Figma variable structure | mint-system SKILL.md Phase 4 | this file |
+| Entry gate (no-prompt) | mint-system SKILL.md § Entry Gate | this file |
+| Fast path (MINT.md → Phase 4) | mint-system SKILL.md § Fast Path | this file |
 | Update check preamble | MINT_UPGRADE.md | this file |
 
 Protocol docs are authoritative. This file mirrors them for quick reference.
@@ -215,6 +217,87 @@ intent vs Figma actual state. Gate on PASS before proceeding.
 ```
 
 Never inline the verification protocol. The full process is in MINT_VERIFICATION.md.
+
+## Entry Gate Format (No-Prompt Invocation)
+
+When a user invokes `/mint-system` with no prompt text, the Entry Gate presents
+an adaptive welcome. Only relevant options are shown:
+
+```json
+{
+  "questions": [
+    {
+      "header": "Mint System",
+      "question": "What are we building?",
+      "multiSelect": false,
+      "options": [
+        { "label": "Build [product] tokens in Figma (Recommended)", "description": "MINT.md has all the decisions. Skip to Figma variable creation." },
+        { "label": "Continue [product name]", "description": "Resume from [phase]. Locked: [summary of decisions]." },
+        { "label": "New design system", "description": "Start fresh. I'll walk you through color, type, and spacing decisions." }
+      ]
+    },
+    {
+      "header": "Figma file",
+      "question": "I need a Figma file to build your design system in. Got one already, or should I create a new file?",
+      "multiSelect": false,
+      "options": [
+        { "label": "I have a file", "description": "I'll paste the URL after submitting" },
+        { "label": "Create one for me", "description": "I'll make a new file in your Figma workspace" }
+      ]
+    }
+  ]
+}
+```
+
+Rules:
+- Recommended option is always position 1
+- "New design system" — always shown, never recommended when others exist
+- "Continue [product]" — only if session file exists and < 24h old
+- "Update [product]" — only if MINT.md exists but incomplete
+- "Build tokens in Figma" — only if MINT.md is complete (primary+neutral scales + typography + spacing)
+- Figma file tab is always included
+- If only "New design system" applies (no session, no MINT.md) — skip the question, go straight to Phase 1
+- If user provided a prompt — skip Entry Gate entirely
+
+Owned by: mint-system SKILL.md § Entry Gate
+
+## Fast Path Format (MINT.md → Phase 4)
+
+When the user selects "Build in Figma" from Entry Gate or Phase 1, the complete
+MINT.md question adds a Figma file tab:
+
+```json
+{
+  "questions": [
+    {
+      "header": "Existing",
+      "question": "You have a complete MINT.md for [product] with [N color scales, font names, spacing]. Want to go straight to Figma, or revisit decisions first?",
+      "multiSelect": false,
+      "options": [
+        { "label": "Build in Figma (Recommended)", "description": "Skip consultation. Load all tokens from MINT.md and create Figma variables directly." },
+        { "label": "Review + update first", "description": "Walk through the system. Keep existing decisions, fill gaps, change what's wrong." },
+        { "label": "Start fresh", "description": "Ignore this MINT.md. Every decision from scratch." },
+        { "label": "Cancel", "description": "Stop. Keep existing MINT.md as-is." }
+      ]
+    },
+    {
+      "header": "Figma file",
+      "question": "I need a Figma file to build your design system in. Got one already, or should I create a new file?",
+      "multiSelect": false,
+      "options": [
+        { "label": "I have a file", "description": "I'll paste the URL after submitting" },
+        { "label": "Create one for me", "description": "I'll make a new file in your Figma workspace" }
+      ]
+    }
+  ]
+}
+```
+
+After "Build in Figma" selection, the fast path hydrates session decisions from
+MINT.md and jumps to Phase 4. No color scales are re-generated — the exact hex
+values from MINT.md are used.
+
+Owned by: mint-system SKILL.md § Fast Path
 
 ## Update Check Preamble Format
 

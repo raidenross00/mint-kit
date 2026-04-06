@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.2.0] — 2026-04-06
+
+### Added
+- **Fast path mode** — when MINT.md has complete tokens (from /mint-extract or a
+  previous run), /mint-system can skip consultation (Phases 1-3) and jump straight
+  to Figma variable creation (Phase 4). Completes the extract → system → lib pipeline.
+- **Entry gate** — running `/mint-system` with no prompt now shows a welcoming
+  "What are we building?" question with adaptive options (new system, continue
+  session, update incomplete system, or fast-path to Figma). No more silently
+  defaulting to the last MINT.md.
+- **Figma variable detection** — fast path checks whether the target Figma file
+  already has variables from a previous run and offers to overwrite (mint-system
+  collections only), skip to publish, or use a different file.
+
+### Changed
+- Phase 1 existing MINT.md detection now distinguishes complete vs incomplete
+  MINT.md files and offers different options accordingly.
+- Overwrite only deletes mint-system collections (Brand/Alias/Map/Responsive) and
+  matching styles, not all content in the Figma file.
+
 ## [0.1.1] — 2026-04-06
 
 ### Added

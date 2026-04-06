@@ -15,6 +15,8 @@ MINT_EXAMPLES.md (mirrors formats from all protocol docs)
   ← MINT_CHECKPOINT.md (checkpoint one-liner format, archive format)
   ← MINT_VERIFICATION.md (verification dispatch format)
   ← mint-system SKILL.md Phase 4 (Figma variable structure)
+  ← mint-system SKILL.md § Entry Gate (no-prompt welcome format)
+  ← mint-system SKILL.md § Fast Path (MINT.md → Phase 4 format)
 
 MINT_CHECKPOINT.md (session schema + resume protocol)
   → mint-system SKILL.md (resume router, checkpoint one-liners)
