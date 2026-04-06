@@ -42,13 +42,16 @@ you pull one out of something that already exists.
 4. **Name tokens using the Brand/Alias/Map layer system.** Raw hex values go in
    Brand tokens. Semantic mappings go in Alias. Theme-aware mappings go in Map.
 
-## Shared Docs
+## Shared Docs (read silently — never mention these to the user)
 
-Before running, read these (they apply to all Mint Kit skills):
-- `shared/MINT_VOICE.md` — tone and posture
-- `shared/ASKUSER_API.md` — AskUserQuestion structure
-- `shared/MINT_PERMISSIONS.md` — setup and cleanup (Phase 0)
-- `shared/MINT_EXAMPLES.md` — format anchors
+Read these files silently before doing anything. Do NOT tell the user you are
+reading them, do NOT say "let me read the shared docs", do NOT list them.
+Just read and internalize. The user should never know these files exist.
+
+- `~/.claude/skills/mint-kit/shared/MINT_VOICE.md` — tone and posture
+- `~/.claude/skills/mint-kit/shared/ASKUSER_API.md` — AskUserQuestion structure
+- `~/.claude/skills/mint-kit/shared/MINT_PERMISSIONS.md` — setup and cleanup (Phase 0)
+- `~/.claude/skills/mint-kit/shared/MINT_EXAMPLES.md` — format anchors
 
 ## Phase 0: Setup + Source Detection
 
@@ -86,29 +89,6 @@ If the source type is ambiguous, ask once:
 }
 ```
 
-### 0c. Check for Existing MINT.md
-
-Check for MINT.md in the current working directory ONLY (not recursive).
-
-- **No MINT.md:** This is a new extraction. Output a complete MINT.md.
-- **MINT.md exists for a DIFFERENT product:** Start fresh, warn the user.
-- **MINT.md exists for THIS product:** Ask:
-
-```json
-{
-  "questions": [{
-    "header": "Mode",
-    "question": "You already have a MINT.md for this product. I recommend merging — I'll keep your existing decisions and fill in or update tokens from the new source.",
-    "multiSelect": false,
-    "options": [
-      { "label": "A: Merge (Recommended)", "description": "Keep existing decisions, update/add tokens from the new source." },
-      { "label": "B: Replace", "description": "Overwrite the entire MINT.md with fresh extraction." },
-      { "label": "C: Cancel", "description": "Stop. Keep existing MINT.md as-is." }
-    ]
-  }]
-}
-```
-
 ## Phase 1: Extract
 
 Read the source and extract raw values. The extraction method depends on source type.
@@ -126,20 +106,66 @@ Use `get_design_context` with the file key and node ID from the URL. Also use
 
 ### From Website
 
-Use `WebFetch` to grab the page HTML. Then fetch each linked stylesheet URL
-(look for `<link rel="stylesheet" href="...">` in the HTML). Extract from the
-combined CSS:
+**Primary path:** If a headless browser tool is available at runtime (e.g. `browse`,
+`$B`, or similar), use it. Navigate to the URL, wait for render, take a screenshot
+for visual analysis, and inspect computed styles. A rendered page gives you actual
+computed values, JS-injected styles, and a visual reference that raw HTML can't.
+
+**Fallback:** If no browser tool is available, use `WebFetch` to grab the page HTML.
+Then fetch each linked stylesheet URL (look for `<link rel="stylesheet" href="...">`
+in the HTML). Extract from the combined CSS.
+
+Either way, extract:
 
 - CSS custom properties (`:root` / `[data-theme]` vars) → Direct token mapping
-- `font-family` declarations → Typography tokens
-- Color values (hex, rgb, hsl) by frequency → Primary/neutral/accent identification
-- `box-shadow` values → Elevation tokens
+- `font-family` declarations + `font-feature-settings` → Typography tokens
+- Colors → Use the weighted identification method below
+- `box-shadow` values → Elevation tokens (classify the approach: chromatic, shadow-as-border, luminance stepping, etc.)
 - Recurring padding/margin/gap values → Spacing scale
 - `border-radius` values → Shape language
 
-If the site uses CSS-in-JS or inline styles and WebFetch returns minimal CSS,
-fall back to screenshot analysis of the page (take a screenshot via the URL
-if possible, or ask the user to provide one).
+If WebFetch returns minimal CSS (CSS-in-JS, inline styles), fall back to screenshot
+analysis of the page.
+
+#### Color Identification (Weighted — Do Not Use Raw Frequency)
+
+Raw CSS frequency is misleading. A gradient with 5 purple stops on one card can
+outnumber a green used on every CTA. Use weighted signals instead, in priority order:
+
+1. **CSS custom property names** — If the site uses `--color-primary`, `--brand-*`,
+   `--accent-*`, these name the roles directly. Check `:root` and `[data-theme]`
+   first. This is the cheapest, most reliable signal.
+
+2. **Logo/favicon cross-reference** — Extract the dominant color from the logo or
+   favicon. Colors matching the logo that ALSO appear on interactive elements are
+   almost certainly primary.
+
+3. **Element-role weighting** — Not all elements are equal. Weight colors by where
+   they appear:
+   - CTA buttons, `[role="button"]`, primary `<a>` actions: **5x**
+   - Navigation, header elements: **4x**
+   - Headings (h1-h3), hero text: **3x**
+   - Body text, borders, backgrounds: **2x**
+   - Decorative (gradients on non-interactive elements, `::before`/`::after`,
+     SVG fills in decorative containers): **0.5x**
+
+4. **Computed styles over source CSS** — When using a browser tool, read
+   `getComputedStyle()` from rendered elements, not raw CSS declarations.
+   For gradient elements, look at the visually dominant color of the rendered
+   element, not the individual gradient stops.
+
+5. **Multi-page convergence** — If you can check 2-3 pages (home, about, pricing),
+   colors appearing on ALL pages are structural. Colors on one page are decorative.
+
+**Ranking:** Highest weighted-score color matching the logo = primary. Highest
+non-matching, non-neutral color = accent. High-area, low-weight colors = neutral.
+Gradient-only colors with low element-role weight = decorative, not primary.
+
+**Accent threshold:** A color only qualifies as an accent if it appears on 3+
+elements with role weight >= 2x (i.e. functional use, not just decoration). A
+color that only shows up in one gradient or one card label is decorative — note
+it in the Decisions Log but do NOT generate a full 50-950 scale for it. Don't
+promote decorative colors to `--accent-primary` or `--accent-secondary`.
 
 ### From Screenshot/Image
 
@@ -175,7 +201,9 @@ Convert raw extracted values into the three-layer token system.
 
 ### Color Mapping
 
-1. Identify the primary color (most prominent brand/action color).
+1. Identify the primary color using the weighted identification method from Phase 1.
+   The primary is the highest-scoring color by element-role weight that matches the
+   logo, NOT the most frequent color in the CSS.
 2. Generate the full 50-950 scale using compounding opacity (20% per step from hero at 500).
 3. Identify the neutral color (text, borders, backgrounds).
 4. Generate neutral 50-950 scale.
@@ -208,9 +236,16 @@ Convert raw extracted values into the three-layer token system.
 ## Phase 3: Present + Confirm
 
 Show the user the complete extracted system. Use a specimen HTML file for visual
-presentation (same pattern as mint-system):
+presentation (same pattern as mint-system).
 
-Write `~/Downloads/mint-kit/specimen.html` with a preview showing:
+**Before writing the specimen HTML**, tell the user it's coming. The specimen is a
+large file and the Write call can take several minutes. Without a status message
+the terminal looks frozen. One short line is enough:
+
+> "Building the specimen now. This takes a minute or two — the preview will open
+> in your browser when it's ready."
+
+Then write `~/Downloads/mint-kit/specimen.html` with a preview showing:
 - Color scales (primary, neutral, accent)
 - Typography samples at each scale level
 - Spacing visualization
@@ -238,7 +273,28 @@ re-present. Repeat until A.
 
 ## Phase 4: Output
 
-Write MINT.md in the current working directory.
+### Check for Existing MINT.md
+
+Before writing, check for MINT.md in the current working directory ONLY (not recursive).
+
+- **No MINT.md:** Write a complete MINT.md. No question needed.
+- **MINT.md exists for a DIFFERENT product:** Warn the user, then overwrite.
+- **MINT.md exists for THIS product:** Ask:
+
+```json
+{
+  "questions": [{
+    "header": "Mode",
+    "question": "You already have a MINT.md for this product. I recommend merging — I'll keep your existing decisions and fill in or update tokens from the new source.",
+    "multiSelect": false,
+    "options": [
+      { "label": "A: Merge (Recommended)", "description": "Keep existing decisions, update/add tokens from the new source." },
+      { "label": "B: Replace", "description": "Overwrite the entire MINT.md with fresh extraction." },
+      { "label": "C: Cancel", "description": "Stop. Keep existing MINT.md as-is." }
+    ]
+  }]
+}
+```
 
 ### New MINT.md
 
