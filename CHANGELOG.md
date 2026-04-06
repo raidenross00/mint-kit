@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1] — 2026-04-06
+
+### Added
+- **`/mint-extract`** — extract design tokens from any source (Figma, website,
+  screenshot, CSS/code, or description) into MINT.md format. One-hit extraction
+  with specimen preview. Creates new or merges into existing MINT.md.
+
 ## [0.1.0] — 2026-04-06
 
 ### Added

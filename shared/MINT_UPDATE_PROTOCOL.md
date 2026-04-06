@@ -61,10 +61,20 @@ migrations/ (upgrade migration scripts)
 MINT_VOICE.md (tone + posture)
   → mint-system SKILL.md (all user-facing output)
   → mint-lib SKILL.md (all user-facing output)
+  → mint-extract SKILL.md (all user-facing output)
 
 MINT_PERMISSIONS.md (setup + cleanup)
   → mint-system SKILL.md (Phase 0)
   → mint-lib SKILL.md (Phase 0a)
+  → mint-extract SKILL.md (Phase 0a)
+
+mint-extract SKILL.md (token extraction from any source)
+  ← MINT_VOICE.md (tone)
+  ← MINT_PERMISSIONS.md (Phase 0 setup)
+  ← ASKUSER_API.md (AskUserQuestion calls)
+  ← MINT_EXAMPLES.md (format anchors)
+  → MINT.md (writes/merges output)
+  ← mint-system SKILL.md Phase 5 (MINT.md template format)
 ```
 
 ## Update Checklist — By File
@@ -135,6 +145,11 @@ When you modify a file, check every downstream dependency listed below.
 - [ ] Confirm the script is idempotent (safe to run multiple times)
 - [ ] Confirm the filename matches `v{VERSION}.sh` format
 - [ ] Confirm MINT_UPGRADE.md §1 Step 4 migration runner would pick it up correctly
+
+### If you change `mint-extract/SKILL.md`:
+- [ ] If MINT.md output format changed: confirm it still matches mint-system Phase 5 template
+- [ ] If new AskUserQuestion calls: confirm they follow ASKUSER_API.md + MINT_EXAMPLES.md format
+- [ ] If merge logic changed: confirm it handles all section presence/absence combinations
 
 ### If you change `MINT_VOICE.md`:
 - [ ] No downstream file updates needed — skills reference it directly
