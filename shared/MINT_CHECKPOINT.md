@@ -7,15 +7,17 @@ This protocol fixes that.
 ## Session File Location
 
 ```
-~/.cache/mint-kit/{project-slug}/{skill}-session.json
+~/.mint-kit/projects/{project-slug}/{skill}-session.json
 ```
 
-**Project slug** = the directory name where MINT.md lives (or CWD if no MINT.md yet).
-Sanitize: lowercase, replace spaces with hyphens, strip non-alphanumeric except hyphens.
+**Project slug** = derived from the product name (from MINT.md header `# [Product Name]`
+or from the user's prompt if no MINT.md yet). Sanitize: lowercase, replace spaces with
+hyphens, strip non-alphanumeric except hyphens. This matches the slug used for
+`~/.mint-kit/projects/{slug}/MINT.md`.
 
-Example: if CWD is `~/projects/tavern-site`, the session file is:
+Example: if the product is "Tales from the Moss-Top Tavern", the session file is:
 ```
-~/.cache/mint-kit/tavern-site/mint-system-session.json
+~/.mint-kit/projects/tales-from-the-moss-top-tavern/mint-system-session.json
 ```
 
 ## Session File Schema
@@ -77,8 +79,8 @@ Example: if CWD is `~/projects/tavern-site`, the session file is:
 On skill start, BEFORE permissions or context gathering:
 
 ```
-1. Derive project-slug from CWD
-2. Check if session file exists at ~/.cache/mint-kit/{slug}/{skill}-session.json
+1. Derive project-slug from product name (from MINT.md or user prompt)
+2. Check if session file exists at ~/.mint-kit/projects/{slug}/{skill}-session.json
 3. If no file → proceed fresh (no checkpoint mention to user)
 4. If file exists but updatedAt > 24h ago → proceed fresh (stale session)
 5. If file exists and < 24h old → read it, offer resume
@@ -149,7 +151,7 @@ Session file writes can fail (disk full, permission denied). This failure would 
 SILENT — no crash, but no recovery either. Every checkpoint write MUST:
 1. Attempt the Write tool call
 2. If the write fails, warn the user: "Checkpoint save failed — your progress
-   won't survive a crash. Check disk space / permissions at ~/.cache/mint-kit/"
+   won't survive a crash. Check disk space / permissions at ~/.mint-kit/projects/"
 3. Continue the skill regardless — a failed checkpoint is NOT a blocker
 
 Do NOT retry checkpoint writes. Warn once, move on.

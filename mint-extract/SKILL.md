@@ -251,7 +251,7 @@ the terminal looks frozen. One short line is enough:
 > "Building the specimen now. This takes a minute or two — the preview will open
 > in your browser when it's ready."
 
-Then write `~/Downloads/mint-kit/specimen.html` with a preview showing:
+Then write `~/.mint-kit/specimen.html` with a preview showing:
 - Color scales (primary, neutral, accent)
 - Typography samples at each scale level
 - Spacing visualization
@@ -279,19 +279,31 @@ re-present. Repeat until A.
 
 ## Phase 4: Output
 
+### Storage Location
+
+MINT.md files are stored centrally at `~/.mint-kit/projects/{slug}/MINT.md`.
+
+**Slug derivation:** Take the extracted product name, lowercase it, replace spaces
+with hyphens, strip all characters except alphanumeric and hyphens.
+Example: "Tales from the Moss-Top Tavern" → `tales-from-the-moss-top-tavern`
+
+**Create the directory** if it doesn't exist: `~/.mint-kit/projects/{slug}/`
+
 ### Check for Existing MINT.md
 
-Before writing, check for MINT.md in the current working directory ONLY (not recursive).
+Check `~/.mint-kit/projects/{slug}/MINT.md` (where slug comes from the extracted
+product name). If one exists for the SAME product, offer merge or replace.
 
-- **No MINT.md:** Write a complete MINT.md. No question needed.
-- **MINT.md exists for a DIFFERENT product:** Warn the user, then overwrite.
-- **MINT.md exists for THIS product:** Ask:
+- **No matching project dir:** Write it. No question needed.
+- **Slug matches an existing dir:** Read `~/.mint-kit/projects/{slug}/MINT.md` and
+  compare product names. If different product (name collision), append a number:
+  `{slug}-2/`. If same product, ask:
 
 ```json
 {
   "questions": [{
     "header": "Mode",
-    "question": "You already have a MINT.md for this product. I recommend merging — I'll keep your existing decisions and fill in or update tokens from the new source.",
+    "question": "You already have a MINT.md for this product at ~/.mint-kit/projects/{slug}/. I recommend merging — I'll keep your existing decisions and fill in or update tokens from the new source.",
     "multiSelect": false,
     "options": [
       { "label": "A: Merge (Recommended)", "description": "Keep existing decisions, update/add tokens from the new source." },
@@ -302,7 +314,9 @@ Before writing, check for MINT.md in the current working directory ONLY (not rec
 }
 ```
 
-### New MINT.md
+### Write MINT.md
+
+Write to `~/.mint-kit/projects/{slug}/MINT.md`. Create the directory first if needed.
 
 Use the exact template from mint-system Phase 5. All sections:
 
@@ -363,10 +377,11 @@ Merged into existing MINT.md:
 
 After MINT.md is written:
 
-> "MINT.md is ready. Next step: run `/mint-system` — it will detect the existing
-> MINT.md and offer to skip consultation (Phases 1-3) and jump straight to Figma
-> variable creation (Phase 4). That gives you a published token library that
-> `/mint-lib` can consume."
+> "MINT.md saved to `~/.mint-kit/projects/{slug}/MINT.md`.
+>
+> Next step: run `/mint-system` — it will detect this project and offer to skip
+> consultation (Phases 1-3) and jump straight to Figma variable creation (Phase 4).
+> That gives you a published token library that `/mint-lib` can consume."
 
 The flow is: **mint-extract → mint-system (fast path) → mint-lib**.
 

@@ -109,7 +109,7 @@ Never expand these into multi-line blocks. The full protocol is in MINT_CHECKPOI
 ## Specimen File Naming
 
 ```
-~/Downloads/mint-kit/specimen.html
+~/.mint-kit/specimen.html
 ```
 
 ONE file. Overwritten on each write. Auto-refreshes via the polling script.
@@ -253,10 +253,11 @@ Rules:
 - Recommended option is always position 1
 - "New design system" — always shown, never recommended when others exist
 - "Continue [product]" — only if session file exists and < 24h old
-- "Update [product]" — only if MINT.md exists but incomplete
-- "Build tokens in Figma" — only if MINT.md is complete (primary+neutral scales + typography + spacing)
+- "Update [product]" — only if MINT.md exists in `~/.mint-kit/projects/{slug}/` but incomplete
+- "Build tokens in Figma" — only if MINT.md is complete in `~/.mint-kit/projects/{slug}/` (primary+neutral scales + typography + spacing)
+- Multiple projects listed as separate options if they exist
 - Figma file tab is always included
-- If only "New design system" applies (no session, no MINT.md) — skip the question, go straight to Phase 1
+- If only "New design system" applies (no session, no projects in `~/.mint-kit/projects/`) — skip the question, go straight to Phase 1
 - If user provided a prompt — skip Entry Gate entirely
 
 Owned by: mint-system SKILL.md § Entry Gate
@@ -264,7 +265,7 @@ Owned by: mint-system SKILL.md § Entry Gate
 ## Fast Path Format (MINT.md → Phase 4)
 
 When the user selects "Build in Figma" from Entry Gate or Phase 1, the complete
-MINT.md question adds a Figma file tab:
+MINT.md (at `~/.mint-kit/projects/{slug}/MINT.md`) question adds a Figma file tab:
 
 ```json
 {
@@ -294,8 +295,8 @@ MINT.md question adds a Figma file tab:
 ```
 
 After "Build in Figma" selection, the fast path hydrates session decisions from
-MINT.md and jumps to Phase 4. No color scales are re-generated — the exact hex
-values from MINT.md are used.
+`~/.mint-kit/projects/{slug}/MINT.md` and jumps to Phase 4. No color scales are
+re-generated — the exact hex values from MINT.md are used.
 
 Owned by: mint-system SKILL.md § Fast Path
 

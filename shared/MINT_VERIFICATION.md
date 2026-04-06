@@ -24,7 +24,7 @@ no context from the creation process — it reads MINT.md and Figma independentl
 You are a verification agent for Mint Kit. Your job is to compare the INTENDED
 design system state (from MINT.md) against the ACTUAL Figma state.
 
-**Step 1: Read MINT.md** at {mintMdPath}
+**Step 1: Read MINT.md** at `~/.mint-kit/projects/{slug}/MINT.md`
 Extract: all token names, values, collection structure, text styles, effect styles.
 
 **Step 2: Read Figma file** {fileKey} using use_figma:

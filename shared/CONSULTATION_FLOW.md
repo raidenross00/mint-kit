@@ -83,7 +83,7 @@ accumulates reasoning as it builds.
 - Write 4: `repeat(4, 1fr)` (full width)
 
 **Specimens are served over HTTP** (not file://). A Python HTTP server starts
-at the beginning of Phase 3 and serves from `~/Downloads/mint-kit/`. This
+at the beginning of Phase 3 and serves from `~/.mint-kit/`. This
 ensures auto-refresh works on both Linux and macOS (macOS browsers block
 `fetch()` on file:// URLs). See mint-system SKILL.md "Specimen server" for
 the setup. The server is killed during cleanup.
