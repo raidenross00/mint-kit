@@ -57,7 +57,12 @@ Just read and internalize. The user should never know these files exist.
 
 ### 0a. Permissions
 
-Follow `shared/MINT_PERMISSIONS.md` for setup (accept-edits prompt, DESIGN.md search).
+Skip the accept-edits prompt — mint-extract only writes one specimen and one
+MINT.md, so the approval count is low. Do NOT follow `shared/MINT_PERMISSIONS.md`
+here (mint-system and mint-lib still use it for their heavier write patterns).
+
+No separate setup bash call needed. The extraction one-liner handles npm install,
+and `mkdir -p` for the project dir happens in Phase 3 before the specimen write.
 
 ### 0b. Detect Source
 
@@ -106,16 +111,60 @@ Use `get_design_context` with the file key and node ID from the URL. Also use
 
 ### From Website
 
-**Primary path:** If a headless browser tool is available at runtime (e.g. `browse`,
-`$B`, or similar), use it. Navigate to the URL, wait for render, take a screenshot
-for visual analysis, and inspect computed styles. A rendered page gives you actual
-computed values, JS-injected styles, and a visual reference that raw HTML can't.
+**Primary path (browser extraction):**
 
-**Fallback:** If the browser tool fails or isn't available, tell the user in one
-line and continue with WebFetch. Don't diagnose why or suggest workarounds — just
-state the fact so they can interrupt and fix it if they want better output.
+1. Run the extraction in a single bash call (auto-installs if needed):
+   ```bash
+   [ -d ~/.claude/skills/mint-kit/mint-extract/node_modules/playwright-core ] || (cd ~/.claude/skills/mint-kit/mint-extract && npm install --silent) ; node ~/.claude/skills/mint-kit/mint-extract/extract-browser.js <url>
+   ```
 
-> "Browser tool didn't respond. Continuing with WebFetch — interrupt me if you
+2. **Read the JSON output directly — do NOT run additional bash/python commands
+   to parse it.** The JSON is in the bash result. Read it inline. Every extra
+   bash call is a permission prompt the user has to approve.
+
+3. **The JSON determines the next step:**
+
+   **Full extraction** (`light` field present, no `partial` flag):
+   - Use computed values as ground truth (override CSS declarations when they conflict)
+   - Map light/dark differences to Map tokens in MINT.md
+   - Note discrepancies in Decisions Log: "CSS declares X, computed shows Y"
+   - Read the screenshot at `screenshotPath` with vision for visual hierarchy analysis
+
+   **Firefox install prompt** (`needsFirefoxInstall: true`):
+   The user only has Firefox (no Chrome/Chromium/Edge/Brave). The script got a
+   screenshot via Firefox's native headless mode but couldn't extract computed
+   styles. Ask the user:
+
+   ```json
+   {
+     "questions": [{
+       "header": "Browser Setup",
+       "question": "You have Firefox but no Chromium-based browser. I got a screenshot but need a programmable browser for computed style extraction.",
+       "multiSelect": false,
+       "options": [
+         { "label": "A: Install playwright Firefox (~80MB, one-time) (Recommended)", "description": "Full extraction with computed styles + theme detection. Downloads a browser binary managed by playwright." },
+         { "label": "B: Continue with screenshot + WebFetch", "description": "No download. I'll analyze the screenshot visually and fetch raw CSS via WebFetch. Less accurate for JS-injected styles." }
+       ]
+     }]
+   }
+   ```
+
+   If A: run `node ~/.claude/skills/mint-kit/mint-extract/extract-browser.js --install-firefox`,
+   then re-run the original extraction command. The script will use playwright's
+   Firefox automatically.
+
+   If B: read the screenshot at `screenshotPath` for visual analysis, then use
+   WebFetch for CSS (same as the WebFetch fallback below).
+
+   **Error** (`error` field present, no `needsFirefoxInstall`):
+   Fall back to WebFetch below.
+
+**Fallback (WebFetch):** If the browser script fails or isn't available, tell the
+user in one line and continue with WebFetch. Don't diagnose why or suggest
+workarounds — just state the fact so they can interrupt and fix it if they want
+better output.
+
+> "Browser extraction failed. Continuing with WebFetch — interrupt me if you
 > want to fix it and retry."
 
 Then fetch the page HTML and each linked stylesheet URL (look for
@@ -138,9 +187,20 @@ analysis of the page.
 Raw CSS frequency is misleading. A gradient with 5 purple stops on one card can
 outnumber a green used on every CTA. Use weighted signals instead, in priority order:
 
+0. **`customPropertyUsage` is ground truth** — When browser extraction succeeded,
+   the output includes a `customPropertyUsage` field that cross-references every
+   CSS custom property against actual rendered `color` and `background-color` values
+   on the page. Check `renderedCount` first. If a custom property has
+   `renderedCount: 0`, it is declared but NOT rendered on any element — do NOT use
+   it as a primary, accent, or any role token regardless of its variable name.
+   A `--accent-color` with `renderedCount: 0` is a dead declaration. Log it in
+   the Decisions Log: "CSS declares --accent-color: #xyz but 0 elements render it.
+   Excluded from token system."
+
 1. **CSS custom property names** — If the site uses `--color-primary`, `--brand-*`,
    `--accent-*`, these name the roles directly. Check `:root` and `[data-theme]`
-   first. This is the cheapest, most reliable signal.
+   first. **BUT only if `renderedCount > 0`** (see rule 0). A well-named variable
+   that nothing renders is not a design token — it's dead CSS.
 
 2. **Logo/favicon cross-reference** — Extract the dominant color from the logo or
    favicon. Colors matching the logo that ALSO appear on interactive elements are
@@ -172,6 +232,27 @@ elements with role weight >= 2x (i.e. functional use, not just decoration). A
 color that only shows up in one gradient or one card label is decorative — note
 it in the Decisions Log but do NOT generate a full 50-950 scale for it. Don't
 promote decorative colors to `--accent-primary` or `--accent-secondary`.
+
+#### Cross-Reference: Browser vs CSS Declarations
+
+When browser extraction succeeded, cross-reference computed values against CSS
+declarations. Computed values win. If `:root` declares `--accent-color: green` but
+`getComputedStyle` reports blue (theme override, JS injection, or media query), use
+blue. Log the discrepancy in the Decisions Log:
+"CSS declares --accent-color: green, computed shows #2563eb (blue). Using computed."
+
+#### Theme Variants from Browser Extraction
+
+The browser script automatically captures both light and dark mode. It uses a 3-tier
+approach: first `prefers-color-scheme` emulation, then DOM mutations (`data-theme`,
+`.dark` class, etc.), then reports "none-detected" if neither worked.
+
+- If `themeMethod` is `"prefers-color-scheme"` or `"dom-mutation"`: use both `light`
+  and `dark` captures to populate Map tokens with real values for both themes.
+- If `themeMethod` is `"none-detected"`: the site likely uses a theme mechanism the
+  script couldn't trigger. Note in Decisions Log: "Site does not respond to
+  prefers-color-scheme or common DOM theme attributes. Only default theme captured.
+  Dark theme derived from light." Then derive dark from light as usual.
 
 ### From Screenshot/Image
 
@@ -210,10 +291,18 @@ Convert raw extracted values into the three-layer token system.
 1. Identify the primary color using the weighted identification method from Phase 1.
    The primary is the highest-scoring color by element-role weight that matches the
    logo, NOT the most frequent color in the CSS.
-2. Generate the full 50-950 scale using compounding opacity (20% per step from hero at 500).
+2. **Use the pre-computed `colorScales` from the browser extraction output.** The
+   script generates 50-950 scales using compounding opacity (same formula as
+   mint-system: each step composites from the PREVIOUS step at 80% opacity, lighter
+   toward white, darker toward black). Find the matching hero color in `colorScales`
+   and use those hex values directly. Do NOT generate your own scales — do NOT use
+   HSL lightness stepping, oklch, or any other method. The script's scales are the
+   source of truth.
 3. Identify the neutral color (text, borders, backgrounds).
-4. Generate neutral 50-950 scale.
-5. If an accent color is visible, generate accent 50-950 scale.
+4. Look up its scale in `colorScales` (match by hero value).
+5. If an accent color is visible, look up its scale in `colorScales`.
+6. If a color doesn't have a pre-computed scale (e.g., WebFetch fallback path),
+   ONLY THEN generate manually using the compounding opacity method from mint-system.
 6. Create semantic aliases: `Alias/primary`, `Alias/surface`, `Alias/text-primary`, etc.
 7. Create Map tokens for light/dark: `Map/text/heading`, `Map/surface/default`, etc.
    If the source only shows one theme, derive the other from the visible one.
@@ -245,13 +334,19 @@ Show the user the complete extracted system. Use a specimen HTML file for visual
 presentation (same pattern as mint-system).
 
 **Before writing the specimen HTML**, tell the user it's coming. The specimen is a
-large file and the Write call can take several minutes. Without a status message
-the terminal looks frozen. One short line is enough:
+large file and the Write call takes several minutes. Without a status message
+the terminal looks frozen. One short line is enough — say it ONCE, not twice:
 
-> "Building the specimen now. This takes a minute or two — the preview will open
-> in your browser when it's ready."
+> "Building the specimen — this is a large write, expect 5-10 minutes. The
+> preview will open in your browser when it's ready."
 
-Then write `~/mint-kit/specimen.html` with a preview showing:
+**Create the project directory first** (in the same bash call as any other
+pending command if possible):
+```bash
+mkdir -p ~/mint-kit/projects/{slug}
+```
+
+Then write `~/mint-kit/projects/{slug}/specimen.html` with a preview showing:
 - Color scales (primary, neutral, accent)
 - Typography samples at each scale level
 - Spacing visualization
@@ -318,41 +413,16 @@ product name). If one exists for the SAME product, offer merge or replace.
 
 Write to `~/mint-kit/projects/{slug}/MINT.md`. Create the directory first if needed.
 
-Use the exact template from mint-system Phase 5. All sections:
+**Use the exact template from `shared/MINT_EXAMPLES.md` § MINT.md Template.**
+Follow those section headings, table column headers, and ordering exactly. The
+format must be parseable by mint-system's fast path.
 
-```
-# [Product Name] — Design System
+For the source line, use: `Extracted from: [source URL/description]`
+For the generated line, use: `Generated by /mint-extract on [date]`
 
-Extracted from: [source URL/description]
-Generated by /mint-extract on [date]
-
-## Aesthetic Direction
-## Shape Language
-## Typography
-### Type Scale
-### Text Styles
-## Color
-### Brand Tokens
-### Alias Tokens (Semantic)
-### Map Tokens (Light/Dark)
-### CSS Custom Properties
-## Fonts
-## Spacing
-## Opacity
-## Elevation
-## Surfaces
-## Accent Color (if detected)
-## Contrast Pairings
-### Recommended Pairings (AA at 16px body)
-## Responsive Typography
-## Motion
-## Decisions Log
-## Component Tokens
-```
-
-The "Extracted from" line replaces the "Figma source" line. The "Decisions Log"
-records what was extracted vs. derived (e.g., "Dark mode derived from light — source
-only showed light theme").
+The "Decisions Log" records what was extracted vs. derived (e.g., "Dark mode
+derived from light — source only showed light theme", or "CSS declares
+--accent-color: #2b5945 but renderedCount=0, excluded from tokens").
 
 ### Merge into Existing MINT.md
 
