@@ -116,12 +116,12 @@ fi
 
 # ─── Step 3: Check cache freshness ──────────────────────────────
 # UP_TO_DATE: 60 min TTL (detect new releases quickly)
-# UPGRADE_AVAILABLE: 720 min TTL (keep nagging)
+# UPGRADE_AVAILABLE: 5 min TTL (re-check soon — user may have upgraded)
 if [ -f "$CACHE_FILE" ]; then
   CACHED="$(cat "$CACHE_FILE" 2>/dev/null || true)"
   case "$CACHED" in
     UP_TO_DATE*)        CACHE_TTL=60 ;;
-    UPGRADE_AVAILABLE*) CACHE_TTL=720 ;;
+    UPGRADE_AVAILABLE*) CACHE_TTL=5 ;;
     *)                  CACHE_TTL=0 ;;  # corrupt → force re-fetch
   esac
 

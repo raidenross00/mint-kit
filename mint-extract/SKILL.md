@@ -111,9 +111,15 @@ Use `get_design_context` with the file key and node ID from the URL. Also use
 for visual analysis, and inspect computed styles. A rendered page gives you actual
 computed values, JS-injected styles, and a visual reference that raw HTML can't.
 
-**Fallback:** If no browser tool is available, use `WebFetch` to grab the page HTML.
-Then fetch each linked stylesheet URL (look for `<link rel="stylesheet" href="...">`
-in the HTML). Extract from the combined CSS.
+**Fallback:** If the browser tool fails or isn't available, tell the user in one
+line and continue with WebFetch. Don't diagnose why or suggest workarounds — just
+state the fact so they can interrupt and fix it if they want better output.
+
+> "Browser tool didn't respond. Continuing with WebFetch — interrupt me if you
+> want to fix it and retry."
+
+Then fetch the page HTML and each linked stylesheet URL (look for
+`<link rel="stylesheet" href="...">` in the HTML). Extract from the combined CSS.
 
 Either way, extract:
 
