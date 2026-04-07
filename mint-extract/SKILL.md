@@ -243,6 +243,18 @@ when you see the page. Compare it to the computed-style winner:
     (highest CTA weight), overridden by screenshot analysis: [brand color]
     dominates visual identity."
 
+**What counts as a design color vs content:** The screenshot is fullPage (entire
+scrollable page). When analyzing it, distinguish:
+- **Design elements** (count toward brand color): solid color fills, geometric
+  shapes, gradient bands, colored sections, tinted overlays, colored borders,
+  background washes. These are intentional brand decisions.
+- **Content photography** (ignore): photos of people, products, scenes, game
+  screenshots, marketing imagery. These are content, not design tokens.
+
+A pink triangle covering 30% of the viewport is a brand design element, not a
+photo. A red sports car is content. Geometric shapes and solid color fills are
+ALWAYS design decisions, even if they look decorative.
+
 Rationale: a primary that only lives on buttons is an accent by another name.
 The primary is the color someone associates with the brand at a glance.
 
