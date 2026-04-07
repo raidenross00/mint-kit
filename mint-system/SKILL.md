@@ -1985,7 +1985,11 @@ function generateScaleOklch(heroL, heroC, heroH) {
     let chromaMult;
     if (targetL > heroL) {
       const t = (targetL - heroL) / (1 - heroL + 0.001);
-      chromaMult = K.LIGHT_CHROMA_FLOOR + (1 - K.LIGHT_CHROMA_FLOOR) * Math.pow(1 - t, K.LIGHT_CHROMA_POWER);
+      // Adaptive: extreme-light heroes differentiate through chroma, not lightness
+      const lightBoost = Math.max(0, (heroL - 0.7)) * 3.3;
+      const ePow = K.LIGHT_CHROMA_POWER + lightBoost;
+      const eFloor = Math.min(0.40, K.LIGHT_CHROMA_FLOOR + lightBoost * 0.08);
+      chromaMult = eFloor + (1 - eFloor) * Math.pow(1 - t, ePow);
     } else {
       const t = (heroL - targetL) / (heroL + 0.001);
       chromaMult = 1 - t * t * (K.DARK_CHROMA_COEFF * Math.min(1, heroC / K.DARK_CHROMA_SCALE_POINT));
