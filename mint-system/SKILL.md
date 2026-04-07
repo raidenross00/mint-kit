@@ -1866,105 +1866,168 @@ current step number (e.g., `"4-step3"`).
 - Effect Styles — shadows, focus rings
 - NO Role variables, NO border-width, NO border-radius — those are mint-lib's job
 
-### Scale Generation — Compounding Opacity
+### Scale Generation — Adaptive OKLCH
 
-All color scales MUST be generated using compounding opacity, NOT linear lightness
-stepping. Linear lightness (stepping L in oklch or HSL) causes dark steps to
-converge to the same near-black — 800/900/950 become visually indistinguishable.
+**13-step scale:** 50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 950.
+7 light + hero + 5 dark. Asymmetric: more background/border steps, fewer text/dark-surface steps.
 
-**How it works — compounding opacity, NOT linear lightness stepping:**
+**Two paths** based on hero OKLCH chroma:
+- **Chromatic** (C ≥ 0.03): Adaptive OKLCH — even L spread, gamut-ratio chroma, hero as chroma peak
+- **Near-neutral** (C < 0.03): Compounding opacity fallback — 80% light, 70% dark alpha
 
-The hero color (primary-500) is the anchor. Lighter steps compound toward white,
-darker steps compound toward black. Each step reduces opacity by 20% FROM THE
-PREVIOUS STEP, then the composited result is color-matched to a solid value.
+**How Adaptive OKLCH works:**
 
-This is NOT `500 × 0.6` for 300. It's `500 × 0.8 = 400`, then `400 × 0.8 = 300`.
-The compounding creates a natural perceptual curve.
-
-**Lighter steps (toward white):**
-1. Start with primary-500 at 100% opacity on pure white (#FFFFFF)
-2. 400 = composite primary-500 at 80% opacity on white → color-match to solid
-3. 300 = composite the 400 result at 80% opacity on white → color-match to solid
-4. 200 = composite the 300 result at 80% opacity on white → color-match to solid
-5. 100 = composite the 200 result at 80% opacity on white → color-match to solid
-6. 50  = composite the 100 result at 80% opacity on white → color-match to solid
-
-**Darker steps (toward black):**
-1. Start with primary-500 at 100% opacity on pure black (#000000)
-2. 600 = composite primary-500 at 80% opacity on black → color-match to solid
-3. 700 = composite the 600 result at 80% opacity on black → color-match to solid
-4. 800 = composite the 700 result at 80% opacity on black → color-match to solid
-5. 900 = composite the 800 result at 80% opacity on black → color-match to solid
-6. 950 = composite the 900 result at 80% opacity on black → color-match to solid
-
-**"Color-match to solid"** means: compute the actual RGB/oklch value that the
-composited semi-transparent color produces, and store THAT as the variable value.
-Every variable must be a solid color (opacity 1.0) — the opacity compositing is
-a generation method, not a storage format.
-
-**Compositing formula:** `result = fg × alpha + bg × (1 - alpha)`
-Apply per-channel (R, G, B). For lighter: bg = white (1,1,1). For darker: bg = black (0,0,0).
-
-4. Convert each solid result to sRGB for Figma storage.
-   Figma variables use RGBA {r, g, b, a} on 0-1 scale (a is always 1.0).
+1. Convert hero to OKLCH (L, C, H).
+2. Compute L targets: even-spread from hero to L=0.97 (light, 7 steps) and chroma-aware
+   dark endpoint (5 steps). Dark endpoint = `min(0.30, base + heroC × 0.8)` — chromatic
+   colors don't go to near-black (color is lost), neutrals can.
+3. At each L target, compute chroma: `maxChromaInGamut(L, heroH) × gamutRatio × taper`.
+   - gamutRatio = heroC / maxChromaInGamut(heroL, heroH) — maintain hero's gamut usage %
+   - Light taper: quadratic falloff from hero (1.0) to step 50 (0.20 floor). Hero pops.
+   - Dark taper: scales with heroC. High chroma → more taper. Low chroma → preserve color.
+4. Convert each OKLCH → sRGB, clamp, store as solid color.
 
 **Scale generation in use_figma** (inline, no external deps):
 ```javascript
-// Composite a foreground color at given opacity onto a background
-// All values 0-1. Returns solid RGB (a=1).
-function composite(fg, bg, alpha) {
-  return {
-    r: fg.r * alpha + bg.r * (1 - alpha),
-    g: fg.g * alpha + bg.g * (1 - alpha),
-    b: fg.b * alpha + bg.b * (1 - alpha),
-    a: 1
-  };
+// --- OKLCH utilities ---
+function srgbToLinear(c) { return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+function linearToSrgb(c) { c = Math.max(0, Math.min(1, c)); return c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1/2.4) - 0.055; }
+
+function rgbToOklab(r, g, b) {
+  const lr = srgbToLinear(r), lg = srgbToLinear(g), lb = srgbToLinear(b);
+  const l = 0.4122214708*lr + 0.5363325363*lg + 0.0514459929*lb;
+  const m = 0.2119034982*lr + 0.6806995451*lg + 0.1073969566*lb;
+  const s = 0.0883024619*lr + 0.2817188376*lg + 0.6299787005*lb;
+  const l_ = Math.cbrt(l), m_ = Math.cbrt(m), s_ = Math.cbrt(s);
+  return [0.2104542553*l_ + 0.7936177850*m_ - 0.0040720468*s_,
+          1.9779984951*l_ - 2.4285922050*m_ + 0.4505937099*s_,
+          0.0259040371*l_ + 0.7827717662*m_ - 0.8086757660*s_];
+}
+function oklabToRgb(L, a, b) {
+  const l_ = L + 0.3963377774*a + 0.2158037573*b;
+  const m_ = L - 0.1055613458*a - 0.0638541728*b;
+  const s_ = L - 0.0894841775*a - 1.2914855480*b;
+  const l = l_*l_*l_, m = m_*m_*m_, s = s_*s_*s_;
+  return { r: linearToSrgb(+4.0767416621*l - 3.3077115913*m + 0.2309699292*s),
+           g: linearToSrgb(-1.2684380046*l + 2.6097574011*m - 0.3413193965*s),
+           b: linearToSrgb(-0.0041960863*l - 0.7034186147*m + 1.7076147010*s), a: 1 };
+}
+function oklabToOklch(L, a, b) {
+  let H = Math.atan2(b, a) * 180 / Math.PI; if (H < 0) H += 360;
+  return [L, Math.sqrt(a*a + b*b), H];
+}
+function oklchToOklab(L, C, H) {
+  const hr = H * Math.PI / 180;
+  return [L, C * Math.cos(hr), C * Math.sin(hr)];
+}
+function isInGamut(L, C, H) {
+  const [aL, aa, ab] = oklchToOklab(L, C, H);
+  const rgb = oklabToRgb(aL, aa, ab);
+  return rgb.r >= -0.002 && rgb.r <= 1.002 && rgb.g >= -0.002 && rgb.g <= 1.002 && rgb.b >= -0.002 && rgb.b <= 1.002;
+}
+function maxChromaAtL(L, H) {
+  let lo = 0, hi = 0.4;
+  while (isInGamut(L, hi, H) && hi < 0.5) hi *= 1.5;
+  for (let i = 0; i < 30; i++) { const mid = (lo + hi) / 2; if (isInGamut(L, mid, H)) lo = mid; else hi = mid; }
+  return lo;
 }
 
-// Generate full scale from hero color (primary-500)
+// --- Compounding opacity (neutral fallback, C < 0.03) ---
+function composite(fg, bg, alpha) {
+  return { r: fg.r*alpha + bg.r*(1-alpha), g: fg.g*alpha + bg.g*(1-alpha), b: fg.b*alpha + bg.b*(1-alpha), a: 1 };
+}
+function lerp01(a, b, t) { return { r: a.r+(b.r-a.r)*t, g: a.g+(b.g-a.g)*t, b: a.b+(b.b-a.b)*t, a: 1 }; }
+
+function generateScaleCompounding(hero) {
+  const W = {r:1,g:1,b:1}, B = {r:0,g:0,b:0};
+  const s400=composite(hero,W,0.80), s300=composite(s400,W,0.80), s200=composite(s300,W,0.80),
+        s100=composite(s200,W,0.80), s50=composite(s100,W,0.80);
+  const s600=composite(hero,B,0.70), s700=composite(s600,B,0.70), s800=composite(s700,B,0.70),
+        s900=composite(s800,B,0.70), s950=composite(s900,B,0.70);
+  return { 50:s50, 100:s100, 150:lerp01(s100,s200,0.5), 200:s200, 250:lerp01(s200,s300,0.5),
+           300:s300, 400:s400, 500:hero, 600:s600, 700:s700, 800:s800, 900:s900, 950:s950 };
+}
+
+// --- Adaptive OKLCH (chromatic heroes, C >= 0.03) ---
+// Tunable knobs (edit these to adjust the formula):
+const KNOBS = {
+  LIGHT_END: 0.97, DARK_BASE: 0.13, DARK_CHROMA_SCALE: 0.8, DARK_CAP: 0.30,
+  LIGHT_STEPS: 7, DARK_STEPS: 5,
+  LIGHT_CHROMA_POWER: 2, LIGHT_CHROMA_FLOOR: 0.20,
+  DARK_CHROMA_COEFF: 0.45, DARK_CHROMA_SCALE_POINT: 0.10,
+  NEUTRAL_THRESHOLD: 0.03,
+};
+
+function generateScaleOklch(heroL, heroC, heroH) {
+  const K = KNOBS;
+  const chromaT = Math.min(1, heroC / 0.06);
+  const darkBase = 0.06 + chromaT * (K.DARK_BASE - 0.06);
+  const darkEnd = Math.min(K.DARK_CAP, darkBase + heroC * K.DARK_CHROMA_SCALE);
+  const lightStep = (K.LIGHT_END - heroL) / K.LIGHT_STEPS;
+  const darkStep = (heroL - darkEnd) / K.DARK_STEPS;
+  const heroMaxC = maxChromaAtL(heroL, heroH);
+  const gamutRatio = heroMaxC > 0.001 ? Math.min(heroC / heroMaxC, 1.0) : 0;
+
+  const lightNames = [50,100,150,200,250,300,400], darkNames = [600,700,800,900,950];
+  const lTargets = { 500: heroL };
+  for (let i = 0; i < K.LIGHT_STEPS; i++) lTargets[lightNames[i]] = heroL + lightStep * (K.LIGHT_STEPS - i);
+  for (let i = 0; i < K.DARK_STEPS; i++) lTargets[darkNames[i]] = heroL - darkStep * (i + 1);
+
+  const result = {};
+  for (const [stepStr, targetL] of Object.entries(lTargets)) {
+    if (+stepStr === 500) {
+      const [aL, aa, ab] = oklchToOklab(heroL, heroC, heroH);
+      const rgb = oklabToRgb(aL, aa, ab);
+      result[stepStr] = { r: Math.max(0,Math.min(1,rgb.r)), g: Math.max(0,Math.min(1,rgb.g)), b: Math.max(0,Math.min(1,rgb.b)), a: 1 };
+      continue;
+    }
+    const maxC = maxChromaAtL(targetL, heroH);
+    let chromaMult;
+    if (targetL > heroL) {
+      const t = (targetL - heroL) / (1 - heroL + 0.001);
+      chromaMult = K.LIGHT_CHROMA_FLOOR + (1 - K.LIGHT_CHROMA_FLOOR) * Math.pow(1 - t, K.LIGHT_CHROMA_POWER);
+    } else {
+      const t = (heroL - targetL) / (heroL + 0.001);
+      chromaMult = 1 - t * t * (K.DARK_CHROMA_COEFF * Math.min(1, heroC / K.DARK_CHROMA_SCALE_POINT));
+    }
+    const targetC = maxC * gamutRatio * chromaMult;
+    const [aL, aa, ab] = oklchToOklab(targetL, targetC, heroH);
+    const rgb = oklabToRgb(aL, aa, ab);
+    result[stepStr] = { r: Math.max(0,Math.min(1,rgb.r)), g: Math.max(0,Math.min(1,rgb.g)), b: Math.max(0,Math.min(1,rgb.b)), a: 1 };
+  }
+  return result;
+}
+
+// --- Main entry: generateScale(hero) → { 50: {r,g,b,a}, ... 950: {r,g,b,a} } ---
 // hero = { r, g, b, a: 1 } in 0-1 range
 function generateScale(hero) {
-  const white = { r: 1, g: 1, b: 1 };
-  const black = { r: 0, g: 0, b: 0 };
-  const alpha = 0.8; // 20% reduction per step
-
-  // Lighter steps: compound toward white
-  const s400 = composite(hero, white, alpha);
-  const s300 = composite(s400, white, alpha);
-  const s200 = composite(s300, white, alpha);
-  const s100 = composite(s200, white, alpha);
-  const s50  = composite(s100, white, alpha);
-
-  // Darker steps: compound toward black
-  const s600 = composite(hero, black, alpha);
-  const s700 = composite(s600, black, alpha);
-  const s800 = composite(s700, black, alpha);
-  const s900 = composite(s800, black, alpha);
-  const s950 = composite(s900, black, alpha);
-
-  return { 50: s50, 100: s100, 200: s200, 300: s300, 400: s400,
-           500: hero, 600: s600, 700: s700, 800: s800, 900: s900, 950: s950 };
+  const [oL, oa, ob] = rgbToOklab(hero.r, hero.g, hero.b);
+  const [heroL, heroC, heroH] = oklabToOklch(oL, oa, ob);
+  if (heroC < KNOBS.NEUTRAL_THRESHOLD) return generateScaleCompounding(hero);
+  return generateScaleOklch(heroL, heroC, heroH);
 }
 
 // Usage:
-// const hero = { r: 0.08, g: 0.65, b: 0.42, a: 1 }; // your approved primary
+// const hero = { r: 0.08, g: 0.65, b: 0.42, a: 1 }; // approved primary
 // const scale = generateScale(hero);
+// scale[500] → hero, scale[50] → lightest, scale[950] → darkest
 // variable.setValueForMode(modeId, scale[500]);
 ```
 
-**Why compounding opacity, not linear lightness:**
-- Each step is visually distinct — linear lightness causes dark steps to converge
-  to the same near-black (which is what you see when 800/900/950 look identical)
-- Compounding preserves hue character at extremes — the 900 still reads as "that
-  color, dark" instead of generic near-black
-- Dark mode ready: the scale has usable differentiation across the full range
-- The 20% step size produces 11 distinct, usable stops
+**Why Adaptive OKLCH, not compounding opacity:**
+- Hero is the clear chroma peak — 400 doesn't compete with 500
+- Chroma-aware dark endpoint: saturated colors stop where color is still visible,
+  neutrals go to near-black for dark mode surfaces
+- Gamut-ratio chroma: maintains the hero's character across the full range
+- 13 steps with 7 light + 5 dark matches how designers actually use scales
+  (more backgrounds/borders, fewer text/surface steps)
+- Near-neutral fallback to compounding opacity avoids OKLCH chroma noise on grays
 
 ### WCAG Contrast Ratio — Computation Helper
 
 After generating scales, pre-compute WCAG contrast ratios for the Design System
-Overview contrast matrix. This function lives alongside `composite()` and
-`generateScale()` in the same `use_figma` call.
+Overview contrast matrix. This function lives alongside `generateScale()` in the
+same `use_figma` call.
 
 ```javascript
 // Convert sRGB channel (0-1) to linear RGB

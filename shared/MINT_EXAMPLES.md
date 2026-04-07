@@ -361,7 +361,7 @@ are NOT locked here — mint-lib discovers those.]
 
 ## Color
 
-Color scales generated using compounding opacity (20% per step from hero).
+Color scales generated using Adaptive OKLCH (13-step: 50-950, chroma-aware endpoints).
 
 ### Brand Tokens
 | Token | Hex | RGB (0-1) | Usage |
@@ -470,29 +470,44 @@ created by /mint-lib during the DNA phase and appended below._
 
 ## Color Scale Generation
 
-All color scales across Mint Kit MUST use compounding opacity, NOT linear
-lightness stepping (HSL L value or oklch L). Linear lightness causes dark steps
-to converge to the same near-black — 800/900/950 become visually indistinguishable.
+**13-step scale:** 50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 950.
+7 light steps + hero + 5 dark steps. Asymmetric: more background/border steps
+(light side), fewer text/dark-surface steps (dark side). Matches how designers
+actually use scales in light and dark mode.
 
-**Method:** The hero color (e.g. primary-500) is the anchor. Each step composites
-from THE PREVIOUS STEP at 80% opacity (20% reduction), not from the hero. Lighter
-steps compound toward white, darker toward black.
+**Method: Adaptive OKLCH** for chromatic heroes (OKLCH C ≥ 0.03):
 
-```
-Lighter: 400 = hero at 80% on white → 300 = 400 at 80% on white → ...
-Darker:  600 = hero at 80% on black → 700 = 600 at 80% on black → ...
-```
+1. **L distribution**: Even-spread in OKLCH L space. Light end fixed at L=0.97.
+   Dark end is chroma-aware: `min(0.30, base + heroC × 0.8)`. Chromatic colors
+   stop before near-black (where color is lost). Near-neutrals go darker.
 
-The composited result is color-matched to a solid hex value (opacity 1.0). The
-opacity is a generation method, not a storage format.
+2. **Chroma**: Gamut-ratio (maintain hero's percentage of available gamut at each
+   lightness) × bilateral taper. Hero is the chroma peak. Light side: quadratic
+   falloff with 20% floor (backgrounds are tinted, not gray). Dark side: taper
+   scales with heroC (high chroma heroes get more taper, low chroma heroes
+   preserve what little color they have).
 
-**Formula:** `result_channel = fg_channel × 0.8 + bg_channel × 0.2` per R/G/B.
+3. **Neutral fallback** (OKLCH C < 0.03): Compounding opacity. Light side at 80%
+   alpha, dark side at 70% alpha (more aggressive to reach near-black in 5 steps).
+   Intermediate steps 150/250 interpolated from neighbors.
 
 **For mint-extract (browser path):** The `extract-browser.js` script pre-computes
-scales in the `colorScales` output field. Use those hex values directly — do NOT
-re-generate scales manually.
+13-step scales in the `colorScales` output field via `generateScale()`. Use those
+hex values directly — do NOT re-generate scales manually.
 
-**For mint-system:** The full `composite()` and `generateScale()` code is in
-mint-system SKILL.md § Scale Generation — Compounding Opacity.
+**For mint-system:** The full Adaptive OKLCH code is in mint-system SKILL.md
+§ Scale Generation — Adaptive OKLCH.
+
+**Tunable knobs** (in `SCALE_KNOBS` at top of extract-browser.js):
+```
+LIGHT_END: 0.97          // L for step 50
+DARK_BASE: 0.13          // darkest endpoint for neutrals
+DARK_CHROMA_SCALE: 0.8   // how much heroC lifts the dark endpoint
+DARK_CAP: 0.30           // max dark endpoint for saturated heroes
+LIGHT_CHROMA_POWER: 2    // light-side falloff exponent
+LIGHT_CHROMA_FLOOR: 0.20 // minimum tint at step 50
+DARK_CHROMA_COEFF: 0.45  // max dark desaturation
+NEUTRAL_THRESHOLD: 0.03  // below this → compounding opacity
+```
 
 Owned by: mint-system SKILL.md § Scale Generation

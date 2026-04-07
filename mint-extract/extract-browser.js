@@ -248,7 +248,28 @@ async function captureStyles(page) {
   }, { selectors: SELECTORS, props: TOKEN_PROPERTIES });
 }
 
-// --- Scale Generation — Compounding Opacity (matches mint-system exactly) ---
+// --- Scale Generation — Adaptive OKLCH (13-step, matches mint-system exactly) ---
+// 13 steps: 50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 950
+// 7 light + hero + 5 dark. Asymmetric: more background/border steps, fewer text steps.
+//
+// For chromatic heroes (C >= 0.03): Adaptive OKLCH
+//   - L: even-spread from hero to fixed light end (0.97) and chroma-aware dark end
+//   - C: gamut-ratio (maintain hero's gamut %) × bilateral taper (hero peaks)
+// For near-neutral heroes (C < 0.03): Compounding opacity fallback
+
+const SCALE_KNOBS = {
+  LIGHT_END: 0.97,
+  DARK_BASE: 0.13,
+  DARK_CHROMA_SCALE: 0.8,
+  DARK_CAP: 0.30,
+  LIGHT_STEPS: 7,
+  DARK_STEPS: 5,
+  LIGHT_CHROMA_POWER: 2,
+  LIGHT_CHROMA_FLOOR: 0.20,
+  DARK_CHROMA_COEFF: 0.45,
+  DARK_CHROMA_SCALE_POINT: 0.10,
+  NEUTRAL_THRESHOLD: 0.03,
+};
 
 function parseHexToRgb01(hex) {
   hex = hex.replace('#', '');
@@ -290,31 +311,161 @@ function composite(fg, bg, alpha) {
   };
 }
 
+// --- OKLCH conversion utilities ---
+
+function srgbToLinear(c) { return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+function linearToSrgb(c) { c = Math.max(0, Math.min(1, c)); return c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1/2.4) - 0.055; }
+
+function rgbToOklab(r, g, b) {
+  const lr = srgbToLinear(r), lg = srgbToLinear(g), lb = srgbToLinear(b);
+  const l = 0.4122214708*lr + 0.5363325363*lg + 0.0514459929*lb;
+  const m = 0.2119034982*lr + 0.6806995451*lg + 0.1073969566*lb;
+  const s = 0.0883024619*lr + 0.2817188376*lg + 0.6299787005*lb;
+  const l_ = Math.cbrt(l), m_ = Math.cbrt(m), s_ = Math.cbrt(s);
+  return [
+    0.2104542553*l_ + 0.7936177850*m_ - 0.0040720468*s_,
+    1.9779984951*l_ - 2.4285922050*m_ + 0.4505937099*s_,
+    0.0259040371*l_ + 0.7827717662*m_ - 0.8086757660*s_
+  ];
+}
+
+function oklabToRgb01(L, a, b) {
+  const l_ = L + 0.3963377774*a + 0.2158037573*b;
+  const m_ = L - 0.1055613458*a - 0.0638541728*b;
+  const s_ = L - 0.0894841775*a - 1.2914855480*b;
+  const l = l_*l_*l_, m = m_*m_*m_, s = s_*s_*s_;
+  const r = +4.0767416621*l - 3.3077115913*m + 0.2309699292*s;
+  const g = -1.2684380046*l + 2.6097574011*m - 0.3413193965*s;
+  const bl = -0.0041960863*l - 0.7034186147*m + 1.7076147010*s;
+  return { r: linearToSrgb(r), g: linearToSrgb(g), b: linearToSrgb(bl) };
+}
+
+function oklabToOklch(L, a, b) {
+  const C = Math.sqrt(a*a + b*b);
+  let H = Math.atan2(b, a) * 180 / Math.PI;
+  if (H < 0) H += 360;
+  return [L, C, H];
+}
+
+function oklchToOklab(L, C, H) {
+  const hr = H * Math.PI / 180;
+  return [L, C * Math.cos(hr), C * Math.sin(hr)];
+}
+
+function isInGamut(L, C, H) {
+  const [aL, aa, ab] = oklchToOklab(L, C, H);
+  const rgb = oklabToRgb01(aL, aa, ab);
+  return rgb.r >= -0.002 && rgb.r <= 1.002 && rgb.g >= -0.002 && rgb.g <= 1.002 && rgb.b >= -0.002 && rgb.b <= 1.002;
+}
+
+function maxChromaAtL(L, H) {
+  let lo = 0, hi = 0.4;
+  while (isInGamut(L, hi, H) && hi < 0.5) hi *= 1.5;
+  for (let i = 0; i < 30; i++) {
+    const mid = (lo + hi) / 2;
+    if (isInGamut(L, mid, H)) lo = mid; else hi = mid;
+  }
+  return lo;
+}
+
+// --- Compounding opacity fallback (for near-neutrals C < 0.03) ---
+
+function generateScaleCompounding(hero) {
+  const white = { r: 1, g: 1, b: 1 };
+  const black = { r: 0, g: 0, b: 0 };
+  function lerp01(a, b, t) {
+    return { r: a.r+(b.r-a.r)*t, g: a.g+(b.g-a.g)*t, b: a.b+(b.b-a.b)*t, a: 1 };
+  }
+  // Light side: 80% alpha
+  const s400 = composite(hero, white, 0.80);
+  const s300 = composite(s400, white, 0.80);
+  const s200 = composite(s300, white, 0.80);
+  const s100 = composite(s200, white, 0.80);
+  const s50  = composite(s100, white, 0.80);
+  // Dark side: 70% alpha (more aggressive, reach near-black in 5 steps)
+  const s600 = composite(hero, black, 0.70);
+  const s700 = composite(s600, black, 0.70);
+  const s800 = composite(s700, black, 0.70);
+  const s900 = composite(s800, black, 0.70);
+  const s950 = composite(s900, black, 0.70);
+  return {
+    '50': s50, '100': s100, '150': lerp01(s100, s200, 0.5),
+    '200': s200, '250': lerp01(s200, s300, 0.5), '300': s300,
+    '400': s400, '500': hero,
+    '600': s600, '700': s700, '800': s800, '900': s900, '950': s950,
+  };
+}
+
+// --- Adaptive OKLCH scale generation (for chromatic heroes C >= 0.03) ---
+
+function generateScaleOklch(heroL, heroC, heroH) {
+  const K = SCALE_KNOBS;
+  const chromaT = Math.min(1, heroC / 0.06);
+  const darkBase = 0.06 + chromaT * (K.DARK_BASE - 0.06);
+  const darkEnd = Math.min(K.DARK_CAP, darkBase + heroC * K.DARK_CHROMA_SCALE);
+  const lightStep = (K.LIGHT_END - heroL) / K.LIGHT_STEPS;
+  const darkStep = (heroL - darkEnd) / K.DARK_STEPS;
+
+  const heroMaxC = maxChromaAtL(heroL, heroH);
+  const gamutRatio = heroMaxC > 0.001 ? Math.min(heroC / heroMaxC, 1.0) : 0;
+
+  const lightNames = [50, 100, 150, 200, 250, 300, 400];
+  const darkNames = [600, 700, 800, 900, 950];
+  const lTargets = { 500: heroL };
+  for (let i = 0; i < K.LIGHT_STEPS; i++) lTargets[lightNames[i]] = heroL + lightStep * (K.LIGHT_STEPS - i);
+  for (let i = 0; i < K.DARK_STEPS; i++) lTargets[darkNames[i]] = heroL - darkStep * (i + 1);
+
+  const result = {};
+  for (const [stepStr, targetL] of Object.entries(lTargets)) {
+    const step = +stepStr;
+    if (step === 500) {
+      // Hero: exact color
+      const [aL, aa, ab] = oklchToOklab(heroL, heroC, heroH);
+      const rgb = oklabToRgb01(aL, aa, ab);
+      result[stepStr] = { r: Math.max(0, Math.min(1, rgb.r)), g: Math.max(0, Math.min(1, rgb.g)), b: Math.max(0, Math.min(1, rgb.b)), a: 1 };
+      continue;
+    }
+    const maxC = maxChromaAtL(targetL, heroH);
+    let chromaMult;
+    if (targetL > heroL) {
+      const t = (targetL - heroL) / (1 - heroL + 0.001);
+      const falloff = Math.pow(1 - t, K.LIGHT_CHROMA_POWER);
+      chromaMult = K.LIGHT_CHROMA_FLOOR + (1 - K.LIGHT_CHROMA_FLOOR) * falloff;
+    } else {
+      const t = (heroL - targetL) / (heroL + 0.001);
+      const darkCoeff = K.DARK_CHROMA_COEFF * Math.min(1, heroC / K.DARK_CHROMA_SCALE_POINT);
+      chromaMult = 1 - t * t * darkCoeff;
+    }
+    const targetC = maxC * gamutRatio * chromaMult;
+    const [aL, aa, ab] = oklchToOklab(targetL, targetC, heroH);
+    const rgb = oklabToRgb01(aL, aa, ab);
+    result[stepStr] = { r: Math.max(0, Math.min(1, rgb.r)), g: Math.max(0, Math.min(1, rgb.g)), b: Math.max(0, Math.min(1, rgb.b)), a: 1 };
+  }
+  return result;
+}
+
+// --- Main entry point: generateScale(heroHex) → { '50': '#hex', ... '950': '#hex' } ---
+
 function generateScale(heroHex) {
   const hero = parseColor(heroHex);
   if (!hero) return null;
-  const white = { r: 1, g: 1, b: 1 };
-  const black = { r: 0, g: 0, b: 0 };
-  const alpha = 0.8;
 
-  const s400 = composite(hero, white, alpha);
-  const s300 = composite(s400, white, alpha);
-  const s200 = composite(s300, white, alpha);
-  const s100 = composite(s200, white, alpha);
-  const s50  = composite(s100, white, alpha);
+  // Convert to OKLCH to decide which path
+  const [oL, oa, ob] = rgbToOklab(hero.r, hero.g, hero.b);
+  const [heroL, heroC, heroH] = oklabToOklch(oL, oa, ob);
 
-  const s600 = composite(hero, black, alpha);
-  const s700 = composite(s600, black, alpha);
-  const s800 = composite(s700, black, alpha);
-  const s900 = composite(s800, black, alpha);
-  const s950 = composite(s900, black, alpha);
+  let scale;
+  if (heroC < SCALE_KNOBS.NEUTRAL_THRESHOLD) {
+    scale = generateScaleCompounding(hero);
+  } else {
+    scale = generateScaleOklch(heroL, heroC, heroH);
+  }
 
-  return {
-    '50': rgb01ToHex(s50), '100': rgb01ToHex(s100), '200': rgb01ToHex(s200),
-    '300': rgb01ToHex(s300), '400': rgb01ToHex(s400), '500': rgb01ToHex(hero),
-    '600': rgb01ToHex(s600), '700': rgb01ToHex(s700), '800': rgb01ToHex(s800),
-    '900': rgb01ToHex(s900), '950': rgb01ToHex(s950),
-  };
+  const result = {};
+  for (const [step, color] of Object.entries(scale)) {
+    result[step] = rgb01ToHex(color);
+  }
+  return result;
 }
 
 // --- Cross-reference: which custom properties actually appear in rendered elements? ---
