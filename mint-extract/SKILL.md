@@ -182,10 +182,10 @@ Either way, extract:
 If WebFetch returns minimal CSS (CSS-in-JS, inline styles), fall back to screenshot
 analysis of the page.
 
-#### Color Identification (Weighted — Do Not Use Raw Frequency)
+#### Color Identification (Category Breadth — Do Not Use Raw Frequency)
 
 Raw CSS frequency is misleading. A gradient with 5 purple stops on one card can
-outnumber a green used on every CTA. Use weighted signals instead, in priority order:
+outnumber a green used on every CTA. Use layered signals instead, in priority order:
 
 0. **`customPropertyUsage` is ground truth** — When browser extraction succeeded,
    the output includes a `customPropertyUsage` field that cross-references every
@@ -206,14 +206,29 @@ outnumber a green used on every CTA. Use weighted signals instead, in priority o
    favicon. Colors matching the logo that ALSO appear on interactive elements are
    almost certainly primary.
 
-3. **Element-role weighting** — Not all elements are equal. Weight colors by where
-   they appear:
-   - CTA buttons, `[role="button"]`, primary `<a>` actions: **5x**
-   - Navigation, header elements: **4x**
-   - Headings (h1-h3), hero text: **3x**
-   - Body text, borders, backgrounds: **2x**
-   - Decorative (gradients on non-interactive elements, `::before`/`::after`,
-     SVG fills in decorative containers): **0.5x**
+3. **Category breadth (primary signal)** — The primary color is the one that
+   spans the most usage categories. Count each chromatic color's presence
+   across these categories:
+
+   - **Meta signals**: `<meta name="theme-color">`, `manifest.json`
+     `theme_color` — intentionally declared, very strong when present
+   - **Surface usage**: `background-color` on sections, banners, heroes,
+     promotional blocks, pricing tables (NOT the global `body` background)
+   - **Text usage**: `color` on headings, emphasized text, branded labels
+   - **Interactive usage**: `background-color` or `color` on buttons, links,
+     focus rings, form accents
+   - **Border/accent usage**: `border-color`, `box-shadow` color, decorative
+     strokes, table/divider accents
+
+   The color spanning the most categories = primary. A color confined to a
+   single category (e.g., only interactive elements) = accent. The global
+   `body`/wrapper background is a surface/neutral token, not a primary
+   candidate — it's the canvas, not the identity.
+
+   **Edge case — single brand color:** If the site has only one non-neutral
+   chromatic color (e.g., white background + blue CTAs + blue links + blue
+   headings), that color is both primary and accent. No separate accent
+   scale needed — note in Decisions Log.
 
 4. **Computed styles over source CSS** — When using a browser tool, read
    `getComputedStyle()` from rendered elements, not raw CSS declarations.
@@ -223,46 +238,37 @@ outnumber a green used on every CTA. Use weighted signals instead, in priority o
 5. **Multi-page convergence** — If you can check 2-3 pages (home, about, pricing),
    colors appearing on ALL pages are structural. Colors on one page are decorative.
 
-**Ranking:** Highest weighted-score color matching the logo = primary. Highest
-non-matching, non-neutral color = accent. High-area, low-weight colors = neutral.
-Gradient-only colors with low element-role weight = decorative, not primary.
+**Ranking from category breadth:**
+- Primary = highest category count among chromatic colors
+- Accent = highest category count among remaining non-primary, non-neutral colors
+  (must appear in 2+ categories — a color in only one category is decorative)
+- Neutral = global canvas + achromatic/near-achromatic colors
+- Ties in category count: break with logo/favicon match, then rendered element
+  count as a tiebreaker (not as the primary signal)
 
-**Screenshot validation (mandatory after ranking):** After the computed-style pipeline
-produces a ranking, read the screenshot at `screenshotPath` and identify the
-dominant chromatic color by visual area. This is the color that LOOKS like the brand
-when you see the page. Compare it to the computed-style winner:
+**Screenshot verification (mandatory after ranking):** After the computed-style
+pipeline produces a ranking, read the **full-page** screenshot at `screenshotPath`.
+The screenshot is the entire scrollable page, not just the visible viewport or
+hero section. You MUST analyze the full length of the image — sections below the
+fold often contain the strongest brand color signals (promotional banners, pricing
+tables, feature sections, footers).
 
-- **Match:** computed pipeline and screenshot agree. Proceed.
-- **Mismatch:** the screenshot's dominant visual color differs from the computed
-  pipeline's primary. The screenshot wins. The computed pipeline is fooled by
-  element-role weighting (5x on buttons) when the brand color only appears on
-  decorative surfaces. Override:
-  - Screenshot's dominant chromatic color → primary
-  - Computed pipeline's CTA color → accent
-  - Log in Decisions Log: "Computed pipeline ranked [CTA color] as primary
-    (highest CTA weight), overridden by screenshot analysis: [brand color]
-    dominates visual identity."
+Ignore content photography (photos of people, products, landscapes, game footage,
+marketing imagery). Focus on CSS-driven designed surfaces: colored section
+backgrounds, banners, tinted overlays, gradient bands, borders, text color.
 
-**What counts as a design color vs content:** The screenshot is fullPage (entire
-scrollable page). When analyzing it, distinguish:
-- **Design elements** (count toward brand color): solid color fills, geometric
-  shapes, gradient bands, colored sections, tinted overlays, colored borders,
-  background washes. These are intentional brand decisions.
-- **Content photography** (ignore): photos of people, products, scenes, game
-  screenshots, marketing imagery. These are content, not design tokens.
+- **Match:** primary candidate from category breadth is visually present on
+  designed surfaces throughout the page. Proceed.
+- **Mismatch:** the screenshot shows a prominent designed-surface color that the
+  computed pipeline missed or underranked. Override and log:
+  "Computed pipeline ranked [X] as primary ([N] categories), overridden by
+  screenshot: [Y] dominates designed surfaces across the full page."
 
-A pink triangle covering 30% of the viewport is a brand design element, not a
-photo. A red sports car is content. Geometric shapes and solid color fills are
-ALWAYS design decisions, even if they look decorative.
-
-Rationale: a primary that only lives on buttons is an accent by another name.
-The primary is the color someone associates with the brand at a glance.
-
-**Accent threshold:** A color only qualifies as an accent if it appears on 3+
-elements with role weight >= 2x (i.e. functional use, not just decoration). A
-color that only shows up in one gradient or one card label is decorative — note
-it in the Decisions Log but do NOT generate a full 50-950 scale for it. Don't
-promote decorative colors to `--accent-primary` or `--accent-secondary`.
+**Accent threshold:** A color only qualifies as an accent if it appears in 2+
+usage categories (i.e. functional breadth, not just decoration). A color that
+only shows up in one gradient or one card label is decorative — note it in the
+Decisions Log but do NOT generate a full 50-950 scale for it. Don't promote
+decorative colors to `--accent-primary` or `--accent-secondary`.
 
 #### Cross-Reference: Browser vs CSS Declarations
 
