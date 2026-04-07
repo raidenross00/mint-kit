@@ -227,6 +227,25 @@ outnumber a green used on every CTA. Use weighted signals instead, in priority o
 non-matching, non-neutral color = accent. High-area, low-weight colors = neutral.
 Gradient-only colors with low element-role weight = decorative, not primary.
 
+**Screenshot validation (mandatory after ranking):** After the computed-style pipeline
+produces a ranking, read the screenshot at `screenshotPath` and identify the
+dominant chromatic color by visual area. This is the color that LOOKS like the brand
+when you see the page. Compare it to the computed-style winner:
+
+- **Match:** computed pipeline and screenshot agree. Proceed.
+- **Mismatch:** the screenshot's dominant visual color differs from the computed
+  pipeline's primary. The screenshot wins. The computed pipeline is fooled by
+  element-role weighting (5x on buttons) when the brand color only appears on
+  decorative surfaces. Override:
+  - Screenshot's dominant chromatic color → primary
+  - Computed pipeline's CTA color → accent
+  - Log in Decisions Log: "Computed pipeline ranked [CTA color] as primary
+    (highest CTA weight), overridden by screenshot analysis: [brand color]
+    dominates visual identity."
+
+Rationale: a primary that only lives on buttons is an accent by another name.
+The primary is the color someone associates with the brand at a glance.
+
 **Accent threshold:** A color only qualifies as an accent if it appears on 3+
 elements with role weight >= 2x (i.e. functional use, not just decoration). A
 color that only shows up in one gradient or one card label is decorative — note
