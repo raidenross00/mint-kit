@@ -202,9 +202,11 @@ outnumber a green used on every CTA. Use layered signals instead, in priority or
    first. **BUT only if `renderedCount > 0`** (see rule 0). A well-named variable
    that nothing renders is not a design token — it's dead CSS.
 
-2. **Logo/favicon cross-reference** — Extract the dominant color from the logo or
-   favicon. Colors matching the logo that ALSO appear on interactive elements are
-   almost certainly primary.
+2. **Logo/favicon cross-reference (supporting signal only)** — If the logo or
+   favicon has a clear, unambiguous chromatic color, it supports a primary
+   candidate. But nav logos are often monochrome, compressed, or SVG outlines
+   — do NOT hallucinate color from an ambiguous logo. Never use logo alone
+   to determine or tiebreak primary. It reinforces, it doesn't decide.
 
 3. **Category breadth (primary signal)** — The primary color is the one that
    spans the most usage categories. Count each chromatic color's presence
@@ -243,26 +245,34 @@ outnumber a green used on every CTA. Use layered signals instead, in priority or
 - Accent = highest category count among remaining non-primary, non-neutral colors
   (must appear in 2+ categories — a color in only one category is decorative)
 - Neutral = global canvas + achromatic/near-achromatic colors
-- Ties in category count: break with logo/favicon match, then rendered element
-  count as a tiebreaker (not as the primary signal)
+- Ties in category count: break with **screenshot designed-surface area** (see
+  below), NOT logo/favicon. Logo is a supporting signal only — nav logos are
+  often monochrome, compressed, or ambiguous.
 
 **Screenshot verification (mandatory after ranking):** After the computed-style
 pipeline produces a ranking, read the **full-page** screenshot at `screenshotPath`.
 The screenshot is the entire scrollable page, not just the visible viewport or
-hero section. You MUST analyze the full length of the image — sections below the
-fold often contain the strongest brand color signals (promotional banners, pricing
-tables, feature sections, footers).
+hero section. You MUST scroll through and analyze the full length of the image —
+sections below the fold often contain the strongest brand color signals
+(promotional banners, pricing tables, feature sections, footers).
 
 Ignore content photography (photos of people, products, landscapes, game footage,
 marketing imagery). Focus on CSS-driven designed surfaces: colored section
 backgrounds, banners, tinted overlays, gradient bands, borders, text color.
 
+**Measure AREA, not contrast.** Do not confuse visual pop (how much a color
+stands out against its background) with visual dominance (how much total
+designed surface area it occupies). A high-contrast color on a small element
+is "loud" but covers little surface. Estimate the fraction of total
+CSS-driven surface area each chromatic color occupies across the full page.
+
 - **Match:** primary candidate from category breadth is visually present on
   designed surfaces throughout the page. Proceed.
-- **Mismatch:** the screenshot shows a prominent designed-surface color that the
-  computed pipeline missed or underranked. Override and log:
+- **Mismatch or tie:** the screenshot shows a different color covering more
+  designed-surface area than the computed pipeline's primary candidate.
+  The screenshot's area winner overrides. Log:
   "Computed pipeline ranked [X] as primary ([N] categories), overridden by
-  screenshot: [Y] dominates designed surfaces across the full page."
+  screenshot: [Y] covers more designed-surface area across the full page."
 
 **Accent threshold:** A color only qualifies as an accent if it appears in 2+
 usage categories (i.e. functional breadth, not just decoration). A color that

@@ -10,8 +10,8 @@ const os = require('os');
 const path = require('path');
 
 const TOKEN_PROPERTIES = [
-  'color', 'background-color', 'font-family', 'font-size', 'font-weight',
-  'line-height', 'letter-spacing', 'border-radius', 'box-shadow',
+  'color', 'background-color', 'border-color', 'font-family', 'font-size',
+  'font-weight', 'line-height', 'letter-spacing', 'border-radius', 'box-shadow',
   'padding', 'margin', 'gap', 'opacity'
 ];
 
@@ -477,10 +477,10 @@ function generateScale(heroHex) {
 function crossReferenceUsage(captureResult) {
   const { customProperties, computedStyles } = captureResult;
 
-  // Collect every rendered color and background-color value across all elements
+  // Collect every rendered color, background-color, and border-color value across all elements
   const renderedColors = new Map(); // value → { count, selectors }
   for (const [sel, props] of Object.entries(computedStyles)) {
-    for (const colorProp of ['color', 'background-color']) {
+    for (const colorProp of ['color', 'background-color', 'border-color']) {
       if (!props[colorProp]) continue;
       for (const entry of props[colorProp]) {
         const existing = renderedColors.get(entry.value);
@@ -591,9 +591,9 @@ async function fullExtraction(pw, launchFn, url, browserName) {
         }
       }
     }
-    // From top computed color/background-color values (not already covered)
+    // From top computed color/background-color/border-color values (not already covered)
     for (const [sel, props] of Object.entries(light.computedStyles)) {
-      for (const colorProp of ['color', 'background-color']) {
+      for (const colorProp of ['color', 'background-color', 'border-color']) {
         if (!props[colorProp]) continue;
         for (const entry of props[colorProp]) {
           const v = entry.value;
