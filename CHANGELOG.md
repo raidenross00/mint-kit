@@ -1,5 +1,47 @@
 # Changelog
 
+## [0.5.2.0] — 2026-04-08
+
+### Added
+- **Browser extraction pipeline** (`extract-browser.js`) — headless Chromium/Firefox
+  captures computed styles, custom properties, theme variants, and full-page
+  screenshots. Pre-computes 13-step color scales for every extracted color.
+- **Adaptive OKLCH scale generation** — 13-step scales (50–950 including 150/250)
+  with gamut-ratio chroma, bilateral taper, and chroma-aware dark endpoints.
+  Near-neutral fallback to compounding opacity.
+- **Category breadth color heuristic** — primary color determined by how many
+  usage categories a color spans (meta signals, surfaces, text, interactive,
+  borders), not element-role weighting. Replaces the old 5x-CTA heuristic
+  that picked accent colors over brand identity colors.
+- **Screenshot verification** — mandatory full-page screenshot analysis after
+  computed-style ranking. Measures designed-surface AREA, not contrast/pop.
+  Serves as tiebreaker when category breadth ties.
+- **`border-color` extraction** — added to TOKEN_PROPERTIES, cross-reference
+  pipeline, and scale generation. Enables the border/accent usage category.
+- **Adaptive chroma taper** — extreme-light heroes (L > 0.7) differentiate
+  through chroma variation instead of lightness, preventing washed-out scales.
+
+### Changed
+- **Logo/favicon demoted** — now a supporting signal only for color identification.
+  Never used as tiebreaker since nav logos are often monochrome or compressed.
+- **Figma variable structure** — updated from 11 vars to 13 vars per color scale
+  (includes 150/250 intermediate steps).
+- **Phase 4 Step 1** — "full 10-step scale" → "full 13-step scale" with enumerated steps.
+- **MINT.md template** — Brand Tokens table now shows all 13 steps explicitly.
+  CSS custom properties comment updated from "compounding opacity" to "Adaptive OKLCH".
+
+### Removed
+- Element-role weighting (5x CTA, 4x nav, 2x backgrounds) — root cause of
+  the CTA-over-brand-color bug.
+- Forza-specific screenshot guidance (geometric shapes, pink triangle examples).
+
+## [0.4.0] — 2026-04-07
+
+### Added
+- **Browser extraction for mint-extract** — `extract-browser.js` with Chromium/Firefox
+  discovery, computed style capture, and theme detection.
+- **Shared MINT.md template** — canonical template in MINT_EXAMPLES.md.
+
 ## [0.3.1] — 2026-04-06
 
 ### Fixed
