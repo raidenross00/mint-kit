@@ -2127,9 +2127,9 @@ values for every scale step. Convert those hex values to RGBA 0-1 format and use
 them directly. This preserves the exact colors the user (or /mint-extract) approved.
 
 **Color scales** — generate using compounding opacity (see Scale Generation above), store as RGBA {r, g, b, a} on 0-1 scale:
-- Brand/Color/primary-50 through primary-950 (full 10-step scale)
-- Brand/Color/neutral-50 through neutral-950 (full 10-step scale)
-- Brand/Color/accent-* (if design has secondary/accent — full scale)
+- Brand/Color/primary-50 through primary-950 (full 13-step scale: 50,100,150,200,250,300,400,500,600,700,800,900,950)
+- Brand/Color/neutral-50 through neutral-950 (full 13-step scale)
+- Brand/Color/accent-* (if design has secondary/accent — full 13-step scale)
 - Brand/Color/semantic-success, semantic-success-light, semantic-success-dark
 - Brand/Color/semantic-error, semantic-error-light, semantic-error-dark
 - Brand/Color/semantic-warning, semantic-warning-light, semantic-warning-dark

@@ -171,10 +171,10 @@ Each write adds a column. The grid expands. Never start at 4 columns.
 ```
 Collections:
 ├── Brand (1 mode: Default)
-│   ├── Color/primary-50 through primary-950 (11 vars)
-│   ├── Color/neutral-50 through neutral-950 (11 vars)
+│   ├── Color/primary-50 through primary-950 (13 vars, includes 150/250)
+│   ├── Color/neutral-50 through neutral-950 (13 vars, includes 150/250)
 │   ├── Color/semantic-success, warning, error, info (4 vars)
-│   ├── Color/accent-50 through accent-950 (11 vars, if locked)
+│   ├── Color/accent-50 through accent-950 (13 vars if locked, includes 150/250)
 │   ├── Space/2xs through 4xl (9 vars)
 │   ├── Opacity/disabled, hover, pressed, overlay, loading (5 vars)
 │   ├── Type/size-hero through size-xs (8 vars)
@@ -366,8 +366,20 @@ Color scales generated using Adaptive OKLCH (13-step: 50-950, chroma-aware endpo
 ### Brand Tokens
 | Token | Hex | RGB (0-1) | Usage |
 |-------|-----|-----------|-------|
+| Brand/Color/primary-50 | #XXXXXX | r,g,b | Lightest tint |
+| Brand/Color/primary-100 | #XXXXXX | r,g,b | |
+| Brand/Color/primary-150 | #XXXXXX | r,g,b | |
+| Brand/Color/primary-200 | #XXXXXX | r,g,b | |
+| Brand/Color/primary-250 | #XXXXXX | r,g,b | |
+| Brand/Color/primary-300 | #XXXXXX | r,g,b | |
+| Brand/Color/primary-400 | #XXXXXX | r,g,b | |
 | Brand/Color/primary-500 | #XXXXXX | r,g,b | Primary actions (hero) |
-| ... | ... | ... | ... |
+| Brand/Color/primary-600 | #XXXXXX | r,g,b | |
+| Brand/Color/primary-700 | #XXXXXX | r,g,b | |
+| Brand/Color/primary-800 | #XXXXXX | r,g,b | |
+| Brand/Color/primary-900 | #XXXXXX | r,g,b | |
+| Brand/Color/primary-950 | #XXXXXX | r,g,b | Darkest shade |
+| *(repeat for neutral, accent if locked)* | | | |
 
 ### Alias Tokens (Semantic)
 | Token | → Brand Reference | Usage |
@@ -385,9 +397,11 @@ Color scales generated using Adaptive OKLCH (13-step: 50-950, chroma-aware endpo
 
 ### CSS Custom Properties
 ` ` `css
-/* Hex values (generated via compounding opacity from hero) */
+/* Hex values (generated via Adaptive OKLCH from hero) */
+--color-primary-50: #XXXXXX;
+/* ... through primary-950 (13 steps) */
 --color-primary-500: #XXXXXX;
-/* Repeat for all Brand and Alias tokens */
+/* Repeat for neutral, accent, and Alias tokens */
 ` ` `
 
 ## Fonts
