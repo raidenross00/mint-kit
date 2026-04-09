@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.5.3.0] — 2026-04-09
+## [0.5.2.2] — 2026-04-09
 
 ### Added
 - **Scale family detection** in extract-browser.js — when multiple rendered colors
