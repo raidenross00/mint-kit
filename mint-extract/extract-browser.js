@@ -458,12 +458,9 @@ function generateScale(heroHex) {
   const [oL, oa, ob] = rgbToOklab(hero.r, hero.g, hero.b);
   const [heroL, heroC, heroH] = oklabToOklch(oL, oa, ob);
 
-  let scale;
-  if (heroC < SCALE_KNOBS.NEUTRAL_THRESHOLD) {
-    scale = generateScaleCompounding(hero);
-  } else {
-    scale = generateScaleOklch(heroL, heroC, heroH);
-  }
+  // OKLCH handles all colors, including neutrals. Near-zero chroma produces
+  // a clean neutral scale with proper L endpoints (0.97 at 50, darkEnd at 950).
+  const scale = generateScaleOklch(heroL, heroC, heroH);
 
   const result = {};
   for (const [step, color] of Object.entries(scale)) {

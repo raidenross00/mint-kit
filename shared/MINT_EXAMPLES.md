@@ -501,9 +501,9 @@ actually use scales in light and dark mode.
    scales with heroC (high chroma heroes get more taper, low chroma heroes
    preserve what little color they have).
 
-3. **Neutral fallback** (OKLCH C < 0.03): Compounding opacity. Light side at 80%
-   alpha, dark side at 70% alpha (more aggressive to reach near-black in 5 steps).
-   Intermediate steps 150/250 interpolated from neighbors.
+3. **Neutrals**: OKLCH handles these too. Near-zero chroma produces a clean
+   neutral scale with proper L endpoints (0.97 at step 50, darkEnd at 950).
+   No special fallback needed.
 
 **For mint-extract (browser path):** The `extract-browser.js` script pre-computes
 13-step scales in the `colorScales` output field via `generateScale()`. Use those

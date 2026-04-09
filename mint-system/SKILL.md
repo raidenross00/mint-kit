@@ -995,14 +995,22 @@ feel?" — ask bounded questions with concrete options.
       ]
     },
     {
-      "header": "Risks",
-      "question": "The safe choices above already make a strong system. These risks are genuine departures — each has a real upside AND a real cost. Take any that feel right, or take none.",
+      "header": "Safe — proven defaults that work (no downside, no surprise)",
+      "question": "These are the battle-tested choices for your category. Every option here is genuinely good — not boring, not a compromise. If you take all safe and zero risks, you get a strong, polished system.",
+      "multiSelect": false,
+      "options": [
+        { "label": "Lock safe choices (Recommended)", "description": "The defaults above are solid. Move on to risks to see if any departures are worth it." }
+      ]
+    },
+    {
+      "header": "Risks — deliberate departures that trade safety for distinction",
+      "question": "Each risk breaks a convention on purpose. You gain something you can't get playing it safe — personality, differentiation, memorability — but you pay a real cost. Take any that feel right, or take none.",
       "multiSelect": true,
       "options": [
         { "label": "[Risk 1 name]", "description": "[What it is]. Gain: [gain]. Cost: [cost]." },
         { "label": "[Risk 2 name]", "description": "[What it is]. Gain: [gain]. Cost: [cost]." },
         { "label": "[Risk 3 name]", "description": "[What it is]. Gain: [gain]. Cost: [cost]." },
-        { "label": "None — safe is strong", "description": "The safe choices make a solid system. No departures needed." }
+        { "label": "None — safe is strong", "description": "The safe choices already make a polished system. No departures needed." }
       ]
     }
   ]
@@ -1871,9 +1879,9 @@ current step number (e.g., `"4-step3"`).
 **13-step scale:** 50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 950.
 7 light + hero + 5 dark. Asymmetric: more background/border steps, fewer text/dark-surface steps.
 
-**Two paths** based on hero OKLCH chroma:
-- **Chromatic** (C ≥ 0.03): Adaptive OKLCH — even L spread, gamut-ratio chroma, hero as chroma peak
-- **Near-neutral** (C < 0.03): Compounding opacity fallback — 80% light, 70% dark alpha
+**One path for all colors** — Adaptive OKLCH handles everything, including neutrals.
+Near-zero chroma produces a clean neutral scale with proper L endpoints (0.97 at
+step 50, chroma-aware dark end at step 950). No special fallback needed.
 
 **How Adaptive OKLCH works:**
 
@@ -1932,30 +1940,13 @@ function maxChromaAtL(L, H) {
   return lo;
 }
 
-// --- Compounding opacity (neutral fallback, C < 0.03) ---
-function composite(fg, bg, alpha) {
-  return { r: fg.r*alpha + bg.r*(1-alpha), g: fg.g*alpha + bg.g*(1-alpha), b: fg.b*alpha + bg.b*(1-alpha), a: 1 };
-}
-function lerp01(a, b, t) { return { r: a.r+(b.r-a.r)*t, g: a.g+(b.g-a.g)*t, b: a.b+(b.b-a.b)*t, a: 1 }; }
-
-function generateScaleCompounding(hero) {
-  const W = {r:1,g:1,b:1}, B = {r:0,g:0,b:0};
-  const s400=composite(hero,W,0.80), s300=composite(s400,W,0.80), s200=composite(s300,W,0.80),
-        s100=composite(s200,W,0.80), s50=composite(s100,W,0.80);
-  const s600=composite(hero,B,0.70), s700=composite(s600,B,0.70), s800=composite(s700,B,0.70),
-        s900=composite(s800,B,0.70), s950=composite(s900,B,0.70);
-  return { 50:s50, 100:s100, 150:lerp01(s100,s200,0.5), 200:s200, 250:lerp01(s200,s300,0.5),
-           300:s300, 400:s400, 500:hero, 600:s600, 700:s700, 800:s800, 900:s900, 950:s950 };
-}
-
-// --- Adaptive OKLCH (chromatic heroes, C >= 0.03) ---
+// --- Adaptive OKLCH (all colors, including neutrals) ---
 // Tunable knobs (edit these to adjust the formula):
 const KNOBS = {
   LIGHT_END: 0.97, DARK_BASE: 0.13, DARK_CHROMA_SCALE: 0.8, DARK_CAP: 0.30,
   LIGHT_STEPS: 7, DARK_STEPS: 5,
   LIGHT_CHROMA_POWER: 2, LIGHT_CHROMA_FLOOR: 0.20,
   DARK_CHROMA_COEFF: 0.45, DARK_CHROMA_SCALE_POINT: 0.10,
-  NEUTRAL_THRESHOLD: 0.03,
 };
 
 function generateScaleOklch(heroL, heroC, heroH) {
@@ -2007,7 +1998,6 @@ function generateScaleOklch(heroL, heroC, heroH) {
 function generateScale(hero) {
   const [oL, oa, ob] = rgbToOklab(hero.r, hero.g, hero.b);
   const [heroL, heroC, heroH] = oklabToOklch(oL, oa, ob);
-  if (heroC < KNOBS.NEUTRAL_THRESHOLD) return generateScaleCompounding(hero);
   return generateScaleOklch(heroL, heroC, heroH);
 }
 
