@@ -1874,26 +1874,76 @@ current step number (e.g., `"4-step3"`).
 - Effect Styles — shadows, focus rings
 - NO Role variables, NO border-width, NO border-radius — those are mint-lib's job
 
-### Scale Generation — Adaptive OKLCH
+### Scale Generation
 
 **13-step scale:** 50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 950.
-7 light + hero + 5 dark. Asymmetric: more background/border steps, fewer text/dark-surface steps.
 
-**One path for all colors** — Adaptive OKLCH handles everything, including neutrals.
-Near-zero chroma produces a clean neutral scale with proper L endpoints (0.97 at
-step 50, chroma-aware dark end at step 950). No special fallback needed.
+**Two paths** based on what the scale is FOR:
 
-**How Adaptive OKLCH works:**
+- **Chromatic** (primary, accent, semantics — heroC ≥ 0.03): Adaptive OKLCH with hero
+  anchored at step 500. Even L distribution from hero to endpoints. Hero is the brand
+  color, and the scale radiates tints (light) and shades (dark) around it.
+- **Neutral** (heroC < 0.03): Endpoint-anchored with Radix-style weighting. No hero
+  concept. L targets are hand-tuned for interface use: dense light side (surfaces,
+  borders, hover states), sparse dark side (text, dark mode). The hero's OKLCH hue is
+  preserved for tint consistency, but step 500 is just wherever it falls in the
+  distribution, not an anchor.
+
+**Why two paths:** Chromatic scales are "a color with tints and shades." Neutral scales
+are "a range of grays weighted for interface use." The hero-at-500 model packs
+resolution around the brand color, which is wrong for neutrals. Interfaces need ~70%
+of neutral resolution on the light end (backgrounds, borders, hover states). Radix
+gives 8 of 12 steps to the light end for exactly this reason.
+
+#### Chromatic Path — Adaptive OKLCH
+
+For primary, accent, and semantic colors. Hero anchored at step 500.
+
+**How it works:**
 
 1. Convert hero to OKLCH (L, C, H).
-2. Compute L targets: even-spread from hero to L=0.97 (light, 7 steps) and chroma-aware
+2. Compute L targets: even-spread from hero to L=0.985 (light, 7 steps) and chroma-aware
    dark endpoint (5 steps). Dark endpoint = `min(0.30, base + heroC × 0.8)` — chromatic
-   colors don't go to near-black (color is lost), neutrals can.
+   colors don't go to near-black (color is lost).
 3. At each L target, compute chroma: `maxChromaInGamut(L, heroH) × gamutRatio × taper`.
    - gamutRatio = heroC / maxChromaInGamut(heroL, heroH) — maintain hero's gamut usage %
    - Light taper: quadratic falloff from hero (1.0) to step 50 (0.20 floor). Hero pops.
    - Dark taper: scales with heroC. High chroma → more taper. Low chroma → preserve color.
 4. Convert each OKLCH → sRGB, clamp, store as solid color.
+
+#### Neutral Path — Endpoint-Anchored, Radix-Weighted
+
+For neutral scales. No hero anchor. Preserves the hero's hue for tint consistency.
+
+**How it works:**
+
+1. Convert hero to OKLCH to extract hue (H) and chroma ratio.
+2. Use hand-tuned L targets weighted toward the light end:
+   - Steps 50-200: dense (surfaces, card backgrounds) — L from 0.985 to 0.925
+   - Steps 250-400: transition zone (borders, placeholders) — L from 0.895 to 0.790
+   - Steps 500-950: sparse (text, dark mode) — L from 0.700 to 0.180
+3. At each L target, compute chroma: `maxChromaInGamut(L, heroH) × gamutRatio × taper`.
+   - Chroma tapered at extremes to prevent navy at dark end or tint blowout at light end.
+   - Taper formula: `max(0.1, 1 - dist × 0.6)` where dist = distance from L=0.55 midpoint.
+   - Multiplied by 0.5 for gentle tint (neutrals should whisper their hue, not shout).
+4. Convert each OKLCH → sRGB, clamp, store as solid color.
+
+**Neutral L targets (hand-tuned):**
+```
+50:  0.985   // page background
+100: 0.970   // card background
+150: 0.950   // secondary card, subtle bg
+200: 0.925   // hover state, input bg
+250: 0.895   // active state, light border
+300: 0.860   // border default
+400: 0.790   // border strong, placeholder
+500: 0.700   // mid anchor (not hero, just where it falls)
+600: 0.580   // muted text, icons
+700: 0.460   // secondary text
+800: 0.340   // heading text (light mode)
+900: 0.240   // primary text
+950: 0.180   // near-black
+```
 
 **Scale generation in use_figma** (inline, no external deps):
 ```javascript
@@ -1940,16 +1990,26 @@ function maxChromaAtL(L, H) {
   return lo;
 }
 
-// --- Adaptive OKLCH (all colors, including neutrals) ---
-// Tunable knobs (edit these to adjust the formula):
+// --- Tunable knobs ---
 const KNOBS = {
-  LIGHT_END: 0.97, DARK_BASE: 0.13, DARK_CHROMA_SCALE: 0.8, DARK_CAP: 0.30,
+  // Chromatic path
+  LIGHT_END: 0.985, DARK_BASE: 0.13, DARK_CHROMA_SCALE: 0.8, DARK_CAP: 0.30,
   LIGHT_STEPS: 7, DARK_STEPS: 5,
   LIGHT_CHROMA_POWER: 2, LIGHT_CHROMA_FLOOR: 0.20,
   DARK_CHROMA_COEFF: 0.45, DARK_CHROMA_SCALE_POINT: 0.10,
+  // Neutral detection
+  NEUTRAL_THRESHOLD: 0.03,
 };
 
-function generateScaleOklch(heroL, heroC, heroH) {
+// --- Neutral L targets (Radix-weighted, hand-tuned for interface use) ---
+const NEUTRAL_L_TARGETS = {
+  50:  0.985, 100: 0.970, 150: 0.950, 200: 0.925,
+  250: 0.895, 300: 0.860, 400: 0.790, 500: 0.700,
+  600: 0.580, 700: 0.460, 800: 0.340, 900: 0.240, 950: 0.180,
+};
+
+// --- Chromatic path: Adaptive OKLCH (hero at 500) ---
+function generateScaleChromatic(heroL, heroC, heroH) {
   const K = KNOBS;
   const chromaT = Math.min(1, heroC / 0.06);
   const darkBase = 0.06 + chromaT * (K.DARK_BASE - 0.06);
@@ -1976,7 +2036,6 @@ function generateScaleOklch(heroL, heroC, heroH) {
     let chromaMult;
     if (targetL > heroL) {
       const t = (targetL - heroL) / (1 - heroL + 0.001);
-      // Adaptive: extreme-light heroes differentiate through chroma, not lightness
       const lightBoost = Math.max(0, (heroL - 0.7)) * 3.3;
       const ePow = K.LIGHT_CHROMA_POWER + lightBoost;
       const eFloor = Math.min(0.40, K.LIGHT_CHROMA_FLOOR + lightBoost * 0.08);
@@ -1993,29 +2052,50 @@ function generateScaleOklch(heroL, heroC, heroH) {
   return result;
 }
 
+// --- Neutral path: Endpoint-anchored, Radix-weighted ---
+function generateScaleNeutral(heroC, heroH) {
+  const heroMaxC = maxChromaAtL(0.55, heroH);
+  const gamutRatio = heroMaxC > 0.001 ? Math.min(heroC / heroMaxC, 1.0) : 0;
+
+  const result = {};
+  for (const [stepStr, targetL] of Object.entries(NEUTRAL_L_TARGETS)) {
+    const maxC = maxChromaAtL(targetL, heroH);
+    // Taper chroma at extremes to prevent navy at dark end / tint blowout at light end
+    const dist = Math.abs(targetL - 0.55) / 0.55;
+    const chromaTaper = Math.max(0.1, 1 - dist * 0.6);
+    const targetC = maxC * gamutRatio * chromaTaper * 0.5; // gentle tint
+    const [aL, aa, ab] = oklchToOklab(targetL, targetC, heroH);
+    const rgb = oklabToRgb(aL, aa, ab);
+    result[stepStr] = { r: Math.max(0,Math.min(1,rgb.r)), g: Math.max(0,Math.min(1,rgb.g)), b: Math.max(0,Math.min(1,rgb.b)), a: 1 };
+  }
+  return result;
+}
+
 // --- Main entry: generateScale(hero) → { 50: {r,g,b,a}, ... 950: {r,g,b,a} } ---
 // hero = { r, g, b, a: 1 } in 0-1 range
 function generateScale(hero) {
   const [oL, oa, ob] = rgbToOklab(hero.r, hero.g, hero.b);
   const [heroL, heroC, heroH] = oklabToOklch(oL, oa, ob);
-  return generateScaleOklch(heroL, heroC, heroH);
+  if (heroC < KNOBS.NEUTRAL_THRESHOLD) return generateScaleNeutral(heroC, heroH);
+  return generateScaleChromatic(heroL, heroC, heroH);
 }
 
 // Usage:
-// const hero = { r: 0.08, g: 0.65, b: 0.42, a: 1 }; // approved primary
-// const scale = generateScale(hero);
-// scale[500] → hero, scale[50] → lightest, scale[950] → darkest
-// variable.setValueForMode(modeId, scale[500]);
+// const primary = { r: 0.24, g: 0.35, b: 0.50, a: 1 }; // chromatic → Adaptive OKLCH
+// const neutral = { r: 0.42, g: 0.45, b: 0.50, a: 1 }; // near-neutral → endpoint-anchored
+// const scale = generateScale(primary);
+// scale[500] → hero (chromatic) or L=0.700 (neutral), scale[50] → lightest
 ```
 
-**Why Adaptive OKLCH, not compounding opacity:**
-- Hero is the clear chroma peak — 400 doesn't compete with 500
-- Chroma-aware dark endpoint: saturated colors stop where color is still visible,
-  neutrals go to near-black for dark mode surfaces
-- Gamut-ratio chroma: maintains the hero's character across the full range
-- 13 steps with 7 light + 5 dark matches how designers actually use scales
-  (more backgrounds/borders, fewer text/surface steps)
-- Near-neutral fallback to compounding opacity avoids OKLCH chroma noise on grays
+**Why two paths:**
+- Chromatic: hero is the brand color, scale radiates around it. Even L distribution
+  from hero to endpoints. Steps 50-100 give card-safe tints.
+- Neutral: no brand color, just a range of grays. Interfaces need ~70% of resolution
+  on the light end (surfaces, borders, hover states). Radix-weighted L targets give
+  4+ card-safe steps (50-200) instead of the 1-2 that hero-anchored distribution produces.
+- Chromatic dark end: chroma-aware endpoint preserves color identity at low lightness.
+- Neutral dark end: uses the same OKLCH chroma computation, preserving the hero's
+  cool/warm tint naturally without going navy or brown.
 
 ### WCAG Contrast Ratio — Computation Helper
 

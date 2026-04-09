@@ -485,43 +485,58 @@ created by /mint-lib during the DNA phase and appended below._
 ## Color Scale Generation
 
 **13-step scale:** 50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 950.
-7 light steps + hero + 5 dark steps. Asymmetric: more background/border steps
-(light side), fewer text/dark-surface steps (dark side). Matches how designers
-actually use scales in light and dark mode.
 
-**Method: Adaptive OKLCH** for chromatic heroes (OKLCH C ≥ 0.03):
+**Two paths** based on what the scale is FOR:
 
-1. **L distribution**: Even-spread in OKLCH L space. Light end fixed at L=0.97.
-   Dark end is chroma-aware: `min(0.30, base + heroC × 0.8)`. Chromatic colors
-   stop before near-black (where color is lost). Near-neutrals go darker.
+- **Chromatic** (primary, accent, semantics — C ≥ 0.03): Adaptive OKLCH with hero
+  at step 500. Even L distribution from hero to endpoints. Steps 50-100 give
+  card-safe tints for semantic backgrounds.
 
-2. **Chroma**: Gamut-ratio (maintain hero's percentage of available gamut at each
-   lightness) × bilateral taper. Hero is the chroma peak. Light side: quadratic
-   falloff with 20% floor (backgrounds are tinted, not gray). Dark side: taper
-   scales with heroC (high chroma heroes get more taper, low chroma heroes
-   preserve what little color they have).
+- **Neutral** (C < 0.03): Endpoint-anchored, Radix-weighted. No hero concept.
+  Dense light side (surfaces, borders, hover states), sparse dark side (text,
+  dark mode). Hero hue preserved for tint consistency. 4+ card-safe steps
+  (50-200) instead of the 1-2 that hero-anchored distribution produces.
 
-3. **Neutrals**: OKLCH handles these too. Near-zero chroma produces a clean
-   neutral scale with proper L endpoints (0.97 at step 50, darkEnd at 950).
-   No special fallback needed.
+**Why two paths:** Chromatic scales are "a color with tints and shades." Neutral
+scales are "a range of grays weighted for interface use." Interfaces need ~70%
+of neutral resolution on the light end. Radix gives 8 of 12 steps to light
+for exactly this reason.
+
+**Chromatic path** — Adaptive OKLCH:
+1. L: even-spread from hero to L=0.985 (light) and chroma-aware dark endpoint
+2. C: gamut-ratio × bilateral taper. Hero is chroma peak.
+3. Light taper: quadratic falloff with 20% floor. Dark taper: scales with heroC.
+
+**Neutral path** — Endpoint-anchored:
+1. Hand-tuned L targets: 50=0.985, 100=0.970 ... 900=0.240, 950=0.180
+2. Chroma from hero hue, tapered at extremes (no navy dark end, no tint blowout)
+3. Step 500 at L=0.700 (not an anchor, just where it falls in the distribution)
 
 **For mint-extract (browser path):** The `extract-browser.js` script pre-computes
 13-step scales in the `colorScales` output field via `generateScale()`. Use those
 hex values directly — do NOT re-generate scales manually.
 
-**For mint-system:** The full Adaptive OKLCH code is in mint-system SKILL.md
-§ Scale Generation — Adaptive OKLCH.
+**For mint-system:** The full code is in mint-system SKILL.md § Scale Generation.
 
 **Tunable knobs** (in `SCALE_KNOBS` at top of extract-browser.js):
 ```
-LIGHT_END: 0.97          // L for step 50
-DARK_BASE: 0.13          // darkest endpoint for neutrals
-DARK_CHROMA_SCALE: 0.8   // how much heroC lifts the dark endpoint
-DARK_CAP: 0.30           // max dark endpoint for saturated heroes
-LIGHT_CHROMA_POWER: 2    // light-side falloff exponent
-LIGHT_CHROMA_FLOOR: 0.20 // minimum tint at step 50
-DARK_CHROMA_COEFF: 0.45  // max dark desaturation
-NEUTRAL_THRESHOLD: 0.03  // below this → compounding opacity
+// Chromatic path
+LIGHT_END: 0.985          // L for step 50
+DARK_BASE: 0.13           // darkest endpoint for neutrals
+DARK_CHROMA_SCALE: 0.8    // how much heroC lifts the dark endpoint
+DARK_CAP: 0.30            // max dark endpoint for saturated heroes
+LIGHT_CHROMA_POWER: 2     // light-side falloff exponent
+LIGHT_CHROMA_FLOOR: 0.20  // minimum tint at step 50
+DARK_CHROMA_COEFF: 0.45   // max dark desaturation
+// Neutral detection
+NEUTRAL_THRESHOLD: 0.03   // below this → neutral path
+```
+
+**Neutral L targets** (in `NEUTRAL_L_TARGETS`):
+```
+50: 0.985  100: 0.970  150: 0.950  200: 0.925
+250: 0.895  300: 0.860  400: 0.790  500: 0.700
+600: 0.580  700: 0.460  800: 0.340  900: 0.240  950: 0.180
 ```
 
 Owned by: mint-system SKILL.md § Scale Generation

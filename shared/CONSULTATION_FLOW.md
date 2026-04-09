@@ -108,6 +108,10 @@ already understands the pattern and wants to compare quickly.
 - Never badmouth alternatives — state what each gains and costs
 - Research must appear in narration — unused research was wasted
 - Under 60 words per column. Columns are narrow in 4-up.
+- All specimens use locked decisions as the visual foundation. If colors are
+  locked, specimen backgrounds and text use the locked palette, not defaults.
+  If fonts are locked, specimens render in the locked typefaces. The consultation
+  flow inherits every prior lock — it never falls back to generic styling.
 
 ## Consistency Anchors
 

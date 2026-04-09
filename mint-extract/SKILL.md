@@ -339,17 +339,25 @@ Convert raw extracted values into the three-layer token system.
    The primary is the highest-scoring color by element-role weight that matches the
    logo, NOT the most frequent color in the CSS.
 2. **Use the pre-computed `colorScales` from the browser extraction output.** The
-   script generates 50-950 scales using compounding opacity (same formula as
-   mint-system: each step composites from the PREVIOUS step at 80% opacity, lighter
-   toward white, darker toward black). Find the matching hero color in `colorScales`
-   and use those hex values directly. Do NOT generate your own scales — do NOT use
-   HSL lightness stepping, oklch, or any other method. The script's scales are the
-   source of truth.
+   script generates 50-950 scales using a two-path formula (same as mint-system):
+   chromatic colors use Adaptive OKLCH with hero at 500, neutrals use
+   endpoint-anchored Radix-weighted distribution. Find the matching hero color in
+   `colorScales` and use those hex values directly. Do NOT generate your own scales
+   — do NOT use HSL lightness stepping or any other method. The script's scales are
+   the source of truth.
+   **Scale families:** When the script detects multiple colors sharing a hue (within
+   15 degrees), it groups them as a scale family. Hand-picked values from the source
+   site are preserved at their nearest step positions; only missing steps are
+   formula-generated. Look for the `handPickedSteps` array to see which steps came
+   from the source (e.g., `[100, 300, 500, 700]`). Every member of a family gets a
+   full `scale` object — you can look up any color and find a complete 13-step scale.
+   The `familyLabel` field links members to their family entry.
 3. Identify the neutral color (text, borders, backgrounds).
-4. Look up its scale in `colorScales` (match by hero value).
+4. Look up its scale in `colorScales` (match by hero value or `heroHex`).
 5. If an accent color is visible, look up its scale in `colorScales`.
 6. If a color doesn't have a pre-computed scale (e.g., WebFetch fallback path),
-   ONLY THEN generate manually using the compounding opacity method from mint-system.
+   ONLY THEN generate manually using the two-path formula from mint-system
+   (Adaptive OKLCH for chromatic, endpoint-anchored for neutrals).
 6. Create semantic aliases: `Alias/primary`, `Alias/surface`, `Alias/text-primary`, etc.
 7. Create Map tokens for light/dark: `Map/text/heading`, `Map/surface/default`, etc.
    If the source only shows one theme, derive the other from the visible one.

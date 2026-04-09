@@ -248,17 +248,19 @@ async function captureStyles(page) {
   }, { selectors: SELECTORS, props: TOKEN_PROPERTIES });
 }
 
-// --- Scale Generation — Adaptive OKLCH (13-step, matches mint-system exactly) ---
+// --- Scale Generation (13-step, matches mint-system exactly) ---
 // 13 steps: 50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 950
-// 7 light + hero + 5 dark. Asymmetric: more background/border steps, fewer text steps.
 //
-// For chromatic heroes (C >= 0.03): Adaptive OKLCH
-//   - L: even-spread from hero to fixed light end (0.97) and chroma-aware dark end
-//   - C: gamut-ratio (maintain hero's gamut %) × bilateral taper (hero peaks)
-// For near-neutral heroes (C < 0.03): Compounding opacity fallback
+// Two paths based on what the scale is FOR:
+// - Chromatic (C >= 0.03): Adaptive OKLCH with hero at step 500.
+//   Even L distribution from hero to endpoints. Hero is the brand color.
+// - Neutral (C < 0.03): Endpoint-anchored, Radix-weighted. No hero concept.
+//   Dense light side (surfaces, borders), sparse dark side (text, dark mode).
+//   Hero hue preserved for tint consistency.
 
 const SCALE_KNOBS = {
-  LIGHT_END: 0.97,
+  // Chromatic path
+  LIGHT_END: 0.985,
   DARK_BASE: 0.13,
   DARK_CHROMA_SCALE: 0.8,
   DARK_CAP: 0.30,
@@ -268,7 +270,15 @@ const SCALE_KNOBS = {
   LIGHT_CHROMA_FLOOR: 0.20,
   DARK_CHROMA_COEFF: 0.45,
   DARK_CHROMA_SCALE_POINT: 0.10,
+  // Neutral detection
   NEUTRAL_THRESHOLD: 0.03,
+};
+
+// Neutral L targets (Radix-weighted, hand-tuned for interface use)
+const NEUTRAL_L_TARGETS = {
+  '50':  0.985, '100': 0.970, '150': 0.950, '200': 0.925,
+  '250': 0.895, '300': 0.860, '400': 0.790, '500': 0.700,
+  '600': 0.580, '700': 0.460, '800': 0.340, '900': 0.240, '950': 0.180,
 };
 
 function parseHexToRgb01(hex) {
@@ -368,37 +378,29 @@ function maxChromaAtL(L, H) {
   return lo;
 }
 
-// --- Compounding opacity fallback (for near-neutrals C < 0.03) ---
+// --- Neutral path: Endpoint-anchored, Radix-weighted ---
 
-function generateScaleCompounding(hero) {
-  const white = { r: 1, g: 1, b: 1 };
-  const black = { r: 0, g: 0, b: 0 };
-  function lerp01(a, b, t) {
-    return { r: a.r+(b.r-a.r)*t, g: a.g+(b.g-a.g)*t, b: a.b+(b.b-a.b)*t, a: 1 };
+function generateScaleNeutral(heroC, heroH) {
+  const heroMaxC = maxChromaAtL(0.55, heroH);
+  const gamutRatio = heroMaxC > 0.001 ? Math.min(heroC / heroMaxC, 1.0) : 0;
+
+  const result = {};
+  for (const [stepStr, targetL] of Object.entries(NEUTRAL_L_TARGETS)) {
+    const maxC = maxChromaAtL(targetL, heroH);
+    // Taper chroma at extremes to prevent navy at dark end / tint blowout at light end
+    const dist = Math.abs(targetL - 0.55) / 0.55;
+    const chromaTaper = Math.max(0.1, 1 - dist * 0.6);
+    const targetC = maxC * gamutRatio * chromaTaper * 0.5; // gentle tint
+    const [aL, aa, ab] = oklchToOklab(targetL, targetC, heroH);
+    const rgb = oklabToRgb01(aL, aa, ab);
+    result[stepStr] = { r: Math.max(0, Math.min(1, rgb.r)), g: Math.max(0, Math.min(1, rgb.g)), b: Math.max(0, Math.min(1, rgb.b)), a: 1 };
   }
-  // Light side: 80% alpha
-  const s400 = composite(hero, white, 0.80);
-  const s300 = composite(s400, white, 0.80);
-  const s200 = composite(s300, white, 0.80);
-  const s100 = composite(s200, white, 0.80);
-  const s50  = composite(s100, white, 0.80);
-  // Dark side: 70% alpha (more aggressive, reach near-black in 5 steps)
-  const s600 = composite(hero, black, 0.70);
-  const s700 = composite(s600, black, 0.70);
-  const s800 = composite(s700, black, 0.70);
-  const s900 = composite(s800, black, 0.70);
-  const s950 = composite(s900, black, 0.70);
-  return {
-    '50': s50, '100': s100, '150': lerp01(s100, s200, 0.5),
-    '200': s200, '250': lerp01(s200, s300, 0.5), '300': s300,
-    '400': s400, '500': hero,
-    '600': s600, '700': s700, '800': s800, '900': s900, '950': s950,
-  };
+  return result;
 }
 
-// --- Adaptive OKLCH scale generation (for chromatic heroes C >= 0.03) ---
+// --- Chromatic path: Adaptive OKLCH (hero at step 500) ---
 
-function generateScaleOklch(heroL, heroC, heroH) {
+function generateScaleChromatic(heroL, heroC, heroH) {
   const K = SCALE_KNOBS;
   const chromaT = Math.min(1, heroC / 0.06);
   const darkBase = 0.06 + chromaT * (K.DARK_BASE - 0.06);
@@ -458,9 +460,11 @@ function generateScale(heroHex) {
   const [oL, oa, ob] = rgbToOklab(hero.r, hero.g, hero.b);
   const [heroL, heroC, heroH] = oklabToOklch(oL, oa, ob);
 
-  // OKLCH handles all colors, including neutrals. Near-zero chroma produces
-  // a clean neutral scale with proper L endpoints (0.97 at 50, darkEnd at 950).
-  const scale = generateScaleOklch(heroL, heroC, heroH);
+  // Neutral path: endpoint-anchored, Radix-weighted (dense light side for interfaces)
+  // Chromatic path: hero at 500, even L distribution (brand color radiates tints/shades)
+  const scale = heroC < SCALE_KNOBS.NEUTRAL_THRESHOLD
+    ? generateScaleNeutral(heroC, heroH)
+    : generateScaleChromatic(heroL, heroC, heroH);
 
   const result = {};
   for (const [step, color] of Object.entries(scale)) {
@@ -574,40 +578,192 @@ async function fullExtraction(pw, launchFn, url, browserName) {
     // Cross-reference: which custom properties are actually rendered?
     const customPropertyUsage = crossReferenceUsage(light);
 
-    // Pre-compute 50-950 scales for every unique rendered color
-    // (so the LLM never has to do color math)
-    const seenColors = new Set();
-    const colorScales = {};
+    // --- Collect all unique rendered colors ---
+    const allColors = []; // { value, parsed, label }
+    const seenColorValues = new Set();
+
     // From custom properties that are actually rendered
     for (const [name, info] of Object.entries(customPropertyUsage)) {
-      if (info.renderedCount > 0 && !seenColors.has(info.value)) {
-        const scale = generateScale(info.value);
-        if (scale) {
-          colorScales[name] = { hero: info.value, scale };
-          seenColors.add(info.value);
+      if (info.renderedCount > 0 && !seenColorValues.has(info.value)) {
+        const parsed = parseColor(info.value);
+        if (parsed) {
+          allColors.push({ value: info.value, parsed, label: name });
+          seenColorValues.add(info.value);
         }
       }
     }
-    // From top computed color/background-color/border-color values (not already covered)
+    // From top computed color/background-color/border-color values
     for (const [sel, props] of Object.entries(light.computedStyles)) {
       for (const colorProp of ['color', 'background-color', 'border-color']) {
         if (!props[colorProp]) continue;
         for (const entry of props[colorProp]) {
           const v = entry.value;
-          if (seenColors.has(v)) continue;
-          // Skip transparent, white, black, and near-variants
+          if (seenColorValues.has(v)) continue;
           if (!v || v === 'rgba(0, 0, 0, 0)' || v === 'transparent') continue;
           const parsed = parseColor(v);
           if (!parsed) continue;
-          // Skip pure white/black
           if (parsed.r > 0.98 && parsed.g > 0.98 && parsed.b > 0.98) continue;
           if (parsed.r < 0.02 && parsed.g < 0.02 && parsed.b < 0.02) continue;
-          const scale = generateScale(v);
-          if (scale) {
-            const label = `computed:${sel}:${colorProp}`;
-            colorScales[label] = { hero: v, heroHex: rgb01ToHex(parsed), scale };
-            seenColors.add(v);
+          allColors.push({ value: v, parsed, label: `computed:${sel}:${colorProp}` });
+          seenColorValues.add(v);
+        }
+      }
+    }
+
+    // --- Scale family detection ---
+    // Group colors by OKLCH hue (within 15 degrees). If multiple colors share a
+    // hue, they may be steps of the same hand-picked scale. Slot them into their
+    // nearest step positions and only generate the missing steps. This preserves
+    // the source site's hand-picked values instead of overwriting with formula output.
+    const HUE_TOLERANCE = 15; // degrees
+    const SCALE_STEPS = [50,100,150,200,250,300,400,500,600,700,800,900,950];
+
+    // Fixed L-to-step mapping for slotting (not derived from input — avoids circular logic).
+    // Chromatic: linear from 0.985 (step 50) to 0.15 (step 950), matching the adaptive OKLCH endpoints.
+    // Neutral: uses NEUTRAL_L_TARGETS directly.
+    const CHROMATIC_L_MAP = {};
+    (function() {
+      const lightEnd = 0.985, darkEnd = 0.15;
+      for (const step of SCALE_STEPS) {
+        const t = (step - 50) / (950 - 50);
+        CHROMATIC_L_MAP[step] = lightEnd - t * (lightEnd - darkEnd);
+      }
+    })();
+
+    function detectScaleFamilies(colors) {
+      // Convert each color to OKLCH
+      const withOklch = colors.map(c => {
+        const [oL, oa, ob] = rgbToOklab(c.parsed.r, c.parsed.g, c.parsed.b);
+        const [L, C, H] = oklabToOklch(oL, oa, ob);
+        return { ...c, L, C, H };
+      });
+
+      // Sort by hue before grouping (deterministic order, fixes order-dependent clustering)
+      const chromatic = withOklch.filter(c => c.C >= SCALE_KNOBS.NEUTRAL_THRESHOLD);
+      const neutrals = withOklch.filter(c => c.C < SCALE_KNOBS.NEUTRAL_THRESHOLD);
+      chromatic.sort((a, b) => a.H - b.H);
+
+      const families = []; // [{ hue, members: [...] }]
+
+      // All near-neutrals in one family
+      if (neutrals.length > 0) {
+        // Use the member with highest chroma for the most stable hue reading
+        const bestNeutral = neutrals.reduce((a, b) => a.C > b.C ? a : b);
+        families.push({ hue: bestNeutral.H, isNeutral: true, members: neutrals });
+      }
+
+      // Chromatic: group by hue with running centroid
+      for (const color of chromatic) {
+        let matched = false;
+        for (const fam of families) {
+          if (fam.isNeutral) continue;
+          let hueDiff = Math.abs(fam.hue - color.H);
+          if (hueDiff > 180) hueDiff = 360 - hueDiff;
+          if (hueDiff <= HUE_TOLERANCE) {
+            fam.members.push(color);
+            // Update centroid (circular mean would be ideal, but simple average works
+            // within a 15-degree window where wrapping isn't an issue)
+            const sumH = fam.members.reduce((s, m) => s + m.H, 0);
+            fam.hue = sumH / fam.members.length;
+            matched = true;
+            break;
           }
+        }
+        if (!matched) {
+          families.push({ hue: color.H, isNeutral: false, members: [color] });
+        }
+      }
+      return families;
+    }
+
+    function slotIntoScale(members, isNeutral) {
+      // For each member, find the nearest scale step by L value using a FIXED
+      // L-to-step mapping (not derived from input — avoids circular logic).
+      const lMap = isNeutral ? NEUTRAL_L_TARGETS : CHROMATIC_L_MAP;
+      const slotted = {};
+      for (const m of members) {
+        let bestStep = 500;
+        let bestDist = Infinity;
+        for (const step of SCALE_STEPS) {
+          const expectedL = typeof lMap[step] === 'number' ? lMap[step] : lMap[String(step)];
+          const dist = Math.abs(m.L - expectedL);
+          if (dist < bestDist) {
+            bestDist = dist;
+            bestStep = step;
+          }
+        }
+        // Only slot if we don't already have a closer match for this step
+        if (!slotted[bestStep] || bestDist < slotted[bestStep].dist) {
+          slotted[bestStep] = { hex: rgb01ToHex(m.parsed), L: m.L, dist: bestDist, label: m.label, isHandPicked: true };
+        }
+      }
+      return slotted;
+    }
+
+    // --- Build colorScales with family detection ---
+    const colorScales = {};
+    const families = detectScaleFamilies(allColors);
+
+    for (const family of families) {
+      if (family.members.length < 2) {
+        // Single color, no family detected. Generate full scale from formula.
+        const m = family.members[0];
+        const scale = generateScale(m.value);
+        if (scale) {
+          colorScales[m.label] = { hero: m.value, heroHex: rgb01ToHex(m.parsed), scale };
+        }
+        continue;
+      }
+
+      // Multiple colors in the same hue family — likely a pre-existing scale.
+      // Slot hand-picked values into nearest steps, generate missing steps.
+      const slotted = slotIntoScale(family.members, family.isNeutral);
+      const handPickedCount = Object.keys(slotted).length;
+
+      // Hero selection: highest chroma member (most likely the actual brand color).
+      // For neutrals this doesn't affect the formula output (neutral path ignores heroL)
+      // but gives the most stable hue reading for tint preservation.
+      const heroMember = family.members.reduce((best, m) => m.C > best.C ? m : best);
+
+      // Generate full scale from formula
+      const formulaScale = generateScale(heroMember.value);
+      if (!formulaScale) continue;
+
+      // Merge: hand-picked values override formula values at their slotted positions.
+      // All other steps come from the formula. Output uses string keys for consistency
+      // with generateScale's native output format.
+      const mergedScale = {};
+      for (const step of SCALE_STEPS) {
+        const key = String(step);
+        if (slotted[step]) {
+          mergedScale[key] = slotted[step].hex;
+        } else {
+          mergedScale[key] = formulaScale[key] || formulaScale[step];
+        }
+      }
+
+      const familyLabel = family.isNeutral ? 'neutral-family' : `family:${heroMember.label}`;
+      colorScales[familyLabel] = {
+        hero: heroMember.value,
+        heroHex: rgb01ToHex(heroMember.parsed),
+        scale: mergedScale,
+        handPickedSteps: Object.keys(slotted).map(Number),
+        handPickedCount,
+        totalMembers: family.members.length,
+      };
+
+      // Individual members also get their OWN scale entry (the merged family scale)
+      // so the consuming LLM can look up any member's color and find a full scale.
+      // This avoids the familyRef indirection that would confuse the LLM.
+      for (const m of family.members) {
+        if (m.label !== heroMember.label) {
+          colorScales[m.label] = {
+            hero: m.value,
+            heroHex: rgb01ToHex(m.parsed),
+            scale: mergedScale,
+            familyLabel,
+            handPickedSteps: Object.keys(slotted).map(Number),
+          };
         }
       }
     }

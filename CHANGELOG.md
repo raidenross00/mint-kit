@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.5.3.0] — 2026-04-09
+
+### Added
+- **Scale family detection** in extract-browser.js — when multiple rendered colors
+  share a hue (within 15 degrees OKLCH H), they're identified as steps of the same
+  scale. Hand-picked values are slotted into their nearest step positions, and only
+  missing steps are generated from the formula. Preserves source site's curated
+  color values instead of overwriting with formula output.
+
+### Changed
+- **Scale generation: two-path architecture** — Chromatic colors (C >= 0.03) keep
+  Adaptive OKLCH with hero at step 500. Neutrals (C < 0.03) now use
+  endpoint-anchored Radix-weighted distribution: hand-tuned L targets with dense
+  light side (4+ card-safe steps at 50-200) and sparse dark side (text/dark mode).
+  Hero hue preserved for tint consistency. Fixes the "depressing neutral" problem
+  where hero-at-500 produced only 1-2 usable light steps.
+- **`generateScaleOklch` renamed to `generateScaleChromatic`** in extract-browser.js
+  for clarity. `generateScaleCompounding` replaced by `generateScaleNeutral`.
+- **NEUTRAL_L_TARGETS constant** added to both extract-browser.js and mint-system
+  SKILL.md. Hand-tuned values: 50=0.985, 100=0.970 ... 900=0.240, 950=0.180.
+- **LIGHT_END knob** updated from 0.97 to 0.985 for chromatic path (lighter step 50).
+
+### Removed
+- `generateScaleCompounding()` — replaced by `generateScaleNeutral()`.
+  Compounding opacity produced brownish dark ends (stripped cool/warm tint)
+  and couldn't reach near-white at step 50 from mid-gray heroes.
+
 ## [0.5.2.0] — 2026-04-08
 
 ### Added

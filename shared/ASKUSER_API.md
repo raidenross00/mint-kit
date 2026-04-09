@@ -89,6 +89,9 @@ questions: [
   they liked (multiSelect). Traits must be specific to the thing picked, not
   generic categories. Then build 4 NEW options (never repeat their pick) informed
   by the selected traits.
+- **Custom text on the Pick tab** → do NOT assume a selection. If the user's
+  response is free text (not one of the 4 options), ask which option they prefer
+  before proceeding. Never infer a lock from ambiguous input.
 
 **Trait extraction example (second call, only if "More like this"):**
 ```
